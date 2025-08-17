@@ -1,227 +1,467 @@
-/*
-  bm-overlay-improved.css
-  Amélioration du rendu et du style pour l'overlay "Blue Marble"
-  - Variables pour thèmes
-  - Meilleure accessibilité (contraste, focus-visible)
-  - Transitions plus fluides et respect du prefers-reduced-motion
-  - Performances : transform hardware-accelerated, will-change minimal
-  - Styles de boutons et inputs améliorés
-  - Compatibilité et fallback pour sélecteurs modernes
-  
-  Version: 0.5.2-improved
-*/
+/* @since 0.5.1 - Version améliorée */
 
-:root{
-  /* palette */
-  --bm-bg: rgba(16,30,70,0.92);            /* fond principal */
-  --bm-accent: #1e6ef4;                    /* couleur principale (boutons) */
-  --bm-accent-strong: #0f5be0;
-  --bm-glass: rgba(255,255,255,0.04);      /* léger effet verre */
-  --bm-muted: rgba(255,255,255,0.6);       /* texte secondaire */
-  --bm-muted-2: rgba(255,255,255,0.45);
-  --bm-border: rgba(255,255,255,0.08);
+/* Variables CSS pour une maintenance facile */
+:root {
+  --bm-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bm-primary-hover: linear-gradient(135deg, #7c8ef2 0%, #8a5cb8 100%);
+  --bm-primary-active: linear-gradient(135deg, #5a6fd8 0%, #6a4296 100%);
+  --bm-background: rgba(30, 41, 59, 0.95);
+  --bm-background-light: rgba(51, 65, 85, 0.8);
+  --bm-text: #f8fafc;
+  --bm-text-muted: #cbd5e1;
+  --bm-accent: #3b82f6;
+  --bm-success: #10b981;
+  --bm-warning: #f59e0b;
+  --bm-error: #ef4444;
+  --bm-border: rgba(148, 163, 184, 0.2);
+  --bm-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  --bm-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   --bm-radius: 12px;
-  --bm-padding: 12px;
-  --bm-shadow: 0 8px 24px rgba(2,6,23,0.55);
-  --bm-font-mono: 'Roboto Mono', 'Courier New', Monaco, 'DejaVu Sans Mono', monospace;
-  --bm-gap: 0.6ch;
+  --bm-radius-sm: 6px;
 }
 
-/* Respecter les préférences d'animation */
-@media (prefers-reduced-motion: reduce) {
-  :root { --bm-transition-time: 0.0s; }
-}
-@media (prefers-reduced-motion: no-preference){
-  :root { --bm-transition-time: 0.22s; }
-}
-
-/* Base du overlay */
-#bm-overlay, #bm-overlay-telemetry {
+/* L'overlay principal avec un design moderne */
+#bm-overlay, 
+#bm-overlay-telemetry {
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  background-color: var(--bm-bg);
-  color: #ffffff;
-  padding: var(--bm-padding);
+  background: var(--bm-background);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--bm-text);
+  padding: 20px;
   border-radius: var(--bm-radius);
-  z-index: 9000;
-  transition: transform var(--bm-transition-time) ease, opacity var(--bm-transition-time) ease, box-shadow var(--bm-transition-time);
-  max-width: 340px;
-  width: min(92vw, 320px);
-  box-shadow: var(--bm-shadow);
-  backdrop-filter: blur(6px) saturate(120%);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-  will-change: transform;
-  transform: translateZ(0);
-  font-family: var(--bm-font-mono);
-  letter-spacing: 0.04em;
-  user-select: none;
-  outline: none;
-}
-
-/* Compact / minimized state (helper class to toggle from JS) */
-#bm-overlay.minimized, #bm-overlay-telemetry.minimized{
-  width: auto;
-  max-width: 240px;
-  padding: 8px;
-  border-radius: 10px;
-}
-
-/* Header / drag bar */
-#bm-bar-drag, #bm-bar-drag-telemetry{
-  display: block;
-  cursor: grab;
-  height: 1.2rem;
-  margin-bottom: 0.6rem;
-  border-radius: 6px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6'><circle cx='3' cy='3' r='1.5' fill='%23A6C8FF' opacity='0.15'/></svg>");
-  background-repeat: repeat;
-  background-size: 6px 6px;
-  transition: box-shadow var(--bm-transition-time) ease, transform 0.05s linear;
-}
-#bm-bar-drag.dragging, #bm-bar-drag-telemetry.dragging{
-  cursor: grabbing;
-  transform: translate3d(0,0,0);
-}
-
-/* While dragging, disable pointer-events on contents for performance */
-#bm-overlay.dragging, #bm-overlay-telemetry.dragging{
-  pointer-events: none;
-}
-#bm-overlay.dragging *:not(#bm-bar-drag):not(#bm-bar-drag-telemetry),
-#bm-overlay-telemetry.dragging *:not(#bm-bar-drag):not(#bm-bar-drag-telemetry){
-  pointer-events: none;
-}
-
-/* Header content */
-#bm-contain-header, #bm-contain-header-telemetry{
-  display: flex;
-  align-items: center;
-  gap: 0.6ch;
-  margin-bottom: 0.5rem;
-}
-#bm-contain-header img, #bm-contain-header-telemetry img{
-  height: 2.4rem;
-  width: auto;
-  display: inline-block;
-  vertical-align: middle;
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
-  transition: opacity var(--bm-transition-time) ease, transform 120ms;
-}
-#bm-contain-header.minified img{ height: 2rem; }
-#bm-overlay h1, #bm-overlay-telemetry h1{
-  font-size: clamp(1rem, 1.6vw, 1.1rem);
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-/* Flexible centered header (useful when minimized) */
-#bm-contain-header.centered, #bm-contain-header-telemetry.centered{
-  display:flex; flex-direction:column; align-items:center; text-align:center; gap:0.2rem;
-}
-
-/* Containers spacing */
-#bm-contain-userinfo, #bm-contain-automation, #bm-contain-coords, #bm-contain-buttons-template, #bm-output-status{
-  margin-top: 0.6rem;
-}
-
-/* Automation checkboxes */
-#bm-contain-automation label{ display:inline-flex; align-items:center; gap:0.5ch; color:var(--bm-muted); font-size:0.9rem; }
-#bm-contain-automation input[type="checkbox"]{ width:1.05rem; height:1.05rem; accent-color: var(--bm-accent); }
-
-/* Coords inputs */
-#bm-contain-coords input[type="number"]{
-  -moz-appearance: textfield;
-  -webkit-appearance: none;
-  appearance: textfield;
-  width: 6ch;
-  min-width: 4ch;
-  padding: 0.25rem 0.4rem;
-  background: rgba(255,255,255,0.03);
   border: 1px solid var(--bm-border);
-  border-radius: 6px;
-  color: #fff;
-  font-size: 0.9rem;
+  box-shadow: var(--bm-shadow);
+  z-index: 9000;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 340px;
+  min-width: 280px;
+  width: auto;
+  
+  /* Optimisations de performance */
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  
+  /* Effet de survol subtil */
+  &:hover {
+    box-shadow: var(--bm-shadow-lg);
+    transform: translateY(-2px);
+  }
 }
-#bm-contain-coords input[type="number"]:focus{ outline: 2px solid rgba(30,110,244,0.18); }
-#bm-contain-coords input[type="number"]::-webkit-outer-spin-button,
-#bm-contain-coords input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
 
-/* Buttons area */
-#bm-contain-buttons-template{ display:flex; gap:0.6ch; flex-wrap:wrap; justify-content:center; align-items:center; }
-#bm-contain-buttons-action{ display:flex; justify-content:space-between; gap:0.5rem; }
+/* Transitions fluides pour les fonctionnalités de minimisation/maximisation */
+#bm-contain-userinfo, 
+#bm-overlay hr, 
+#bm-overlay-telemetry hr, 
+#bm-contain-automation, 
+#bm-contain-buttons-action {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-/* Generic button style */
-#bm-overlay button, #bm-overlay-telemetry button{
-  background-color: var(--bm-accent);
-  color: white;
-  border: none;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 0.95rem;
+/* Typographie moderne avec une pile de polices améliorée */
+div#bm-overlay, 
+div#bm-overlay-telemetry {
+  font-family: 'SF Pro Display', 'Segoe UI Variable', 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+
+/* Barre de déplacement avec un style moderne */
+#bm-bar-drag, 
+#bm-bar-drag-telemetry {
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, transparent, var(--bm-accent), transparent);
+  background-size: 200% 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: grab;
+  width: 100%;
+  height: 24px;
+  border-radius: var(--bm-radius-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  
+  /* Indicateur de déplacement moderne */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 4px;
+    background: var(--bm-text-muted);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+  }
+  
+  &:hover::before {
+    background: var(--bm-accent);
+    width: 40px;
+  }
+}
+
+/* État de déplacement */
+#bm-bar-drag.dragging, 
+#bm-bar-drag-telemetry.dragging {
+  cursor: grabbing;
+  
+  &::before {
+    background: var(--bm-accent);
+    width: 48px;
+  }
+}
+
+/* Désactiver les interactions pendant le déplacement */
+#bm-overlay:has(#bm-bar-drag.dragging), 
+#bm-overlay-telemetry:has(#bm-bar-drag-telemetry.dragging) {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Garder la barre interactive pendant le déplacement */
+#bm-bar-drag.dragging, 
+#bm-bar-drag-telemetry.dragging {
+  pointer-events: auto;
+}
+
+/* Conteneur d'en-tête moderne */
+#bm-contain-header, 
+#bm-contain-header-telemetry {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bm-border);
+}
+
+/* Styles d'en-tête minimisé */
+#bm-contain-header[style*="text-align: center"], 
+#bm-contain-header-telemetry[style*="text-align: center"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Maintenir une largeur cohérente quand minimisé */
+#bm-overlay[style*="padding: 5px"], 
+#bm-overlay-telemetry[style*="padding: 5px"] {
+  width: auto !important;
+  max-width: 300px;
+  min-width: 240px;
+  padding: 12px !important;
+}
+
+/* Image Blue Marble avec effet moderne */
+#bm-overlay img {
+  display: inline-block;
+  height: 36px;
+  width: 36px;
+  margin-right: 12px;
+  vertical-align: middle;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  
+  &:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* Ajustement de l'image quand minimisé */
+#bm-contain-header[style*="text-align: center"] img {
+  margin-right: 0;
+  margin-left: 0;
+  display: block;
+  margin: 0 auto 8px auto;
+}
+
+/* En-tête Blue Marble moderne */
+#bm-overlay h1, 
+#bm-overlay-telemetry h1 {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  vertical-align: middle;
+  margin: 0;
+  background: linear-gradient(135deg, var(--bm-text), var(--bm-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cases à cocher modernes */
+#bm-contain-automation input[type="checkbox"] {
+  vertical-align: middle;
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--bm-accent);
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(8,25,64,0.45);
-  transition: transform 120ms ease, background-color var(--bm-transition-time) ease, box-shadow var(--bm-transition-time) ease;
-  display:inline-flex; align-items:center; gap:0.5ch;
-}
-#bm-overlay button:hover, #bm-overlay button:focus-visible, #bm-overlay-telemetry button:hover, #bm-overlay-telemetry button:focus-visible{
-  background-color: var(--bm-accent-strong);
-  transform: translateY(-1px);
-}
-#bm-overlay button:active, #bm-overlay-telemetry button:active{
-  transform: translateY(0);
-}
-#bm-overlay button:disabled, #bm-overlay-telemetry button:disabled{
-  background-color: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.5);
-  cursor: not-allowed;
-  text-decoration: none;
-  box-shadow: none;
 }
 
-/* Small icon-like buttons (help, pin, star) */
-.bm-help, #bm-button-coords{ width:1.5rem; height:1.5rem; padding:0; border-radius:6px; display:inline-grid; place-items:center; background:var(--bm-glass); border:1px solid var(--bm-border); }
-.bm-help:hover{ transform: scale(1.03); }
-#bm-button-coords svg{ width:60%; height:60%; display:block; fill: currentColor; color:#07122b; }
-#bm-button-favorite svg, #bm-button-template svg{ height:1.05rem; vertical-align:middle; }
-
-/* File input hack: keep the input visually hidden but keyboard accessible via label */
-#bm-input-file-template{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
-div:has(> #bm-input-file-template) > button{ width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* Status box */
-#bm-output-status{
-  font-size: 0.86rem;
-  background: rgba(0,0,0,0.15);
-  padding: 0.5rem;
-  border-radius: 8px;
-  min-height: 3.75rem;
-  color: var(--bm-muted-2);
-  overflow:auto;
+/* Étiquettes des cases à cocher */
+#bm-contain-automation label {
+  margin-right: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: var(--bm-accent);
+  }
 }
 
-/* Small text */
-#bm-overlay small{ font-size:0.75rem; color:var(--bm-muted-2); }
-
-/* HR smoothing and small separators */
-#bm-overlay hr, #bm-overlay-telemetry hr{ height:1px; border:0; background: linear-gradient(90deg, transparent, var(--bm-border), transparent); margin:0.6rem 0; }
-
-/* Accessibility focus outline */
-:focus-visible{ outline: 3px solid rgba(30,110,244,0.18); outline-offset: 3px; border-radius: 8px; }
-
-/* Utility: make the overlay more responsive on very small screens */
-@media (max-width: 420px){
-  #bm-overlay, #bm-overlay-telemetry{ right:0.6rem; left:0.6rem; bottom:0.8rem; width: calc(100% - 1.2rem); max-width: none; }
-  #bm-contain-header img{ height:2.1rem; }
-  #bm-overlay h1{ font-size:1rem; }
+/* Bouton d'aide moderne */
+.bm-help {
+  border: 1px solid var(--bm-border);
+  background: var(--bm-background-light);
+  color: var(--bm-text);
+  height: 28px;
+  width: 28px;
+  margin-top: 2px;
+  text-align: center;
+  line-height: 26px;
+  padding: 0 !important;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  
+  &:hover {
+    background: var(--bm-accent);
+    border-color: var(--bm-accent);
+    transform: scale(1.1);
+  }
 }
 
-/* Printing fallback: hide overlay */
-@media print{ #bm-overlay, #bm-overlay-telemetry{ display:none !important; } }
+/* Bouton de coordonnées */
+#bm-button-coords {
+  vertical-align: middle;
+}
 
-/* Fallbacks & notes:
-   - The :has() selector is powerful but not supported in older browsers. The file input and some layout utilities rely on it; if you must support legacy browsers, add explicit classes from JS instead.
-   - Use JS to toggle the classes: .dragging, .minimized, .centered, .dragging on root overlay etc.
-*/
+/* Image du bouton de coordonnées */
+#bm-button-coords svg {
+  width: 16px;
+  height: 16px;
+  margin: 0 auto;
+  fill: var(--bm-text);
+  transition: fill 0.2s ease;
+}
+
+/* Conteneur des boutons d'action flexibles */
+div:has(> #bm-button-teleport) {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Images des boutons favoris et modèles */
+#bm-button-favorite svg, 
+#bm-button-template svg {
+  height: 16px;
+  width: 16px;
+  margin: 0 auto;
+  margin-top: 2px;
+  text-align: center;
+  line-height: 1em;
+  vertical-align: bottom;
+  fill: var(--bm-text);
+  transition: all 0.2s ease;
+}
+
+/* Champs de saisie modernes pour les coordonnées */
+#bm-contain-coords input[type="number"] {
+  appearance: none;
+  -moz-appearance: textfield;
+  width: 80px;
+  margin-left: 8px;
+  background: var(--bm-background-light);
+  border: 1px solid var(--bm-border);
+  border-radius: var(--bm-radius-sm);
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  color: var(--bm-text);
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--bm-accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  &:hover {
+    border-color: var(--bm-accent);
+  }
+}
+
+/* Suppression des flèches de défilement */
+#bm-contain-coords input[type="number"]::-webkit-outer-spin-button,
+#bm-contain-coords input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Conteneur des boutons de modèle */
+#bm-contain-buttons-template {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+
+/* Bouton de téléchargement de modèle */
+div:has(> #bm-input-file-template) > button {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Masquage complet de l'input de fichier */
+#bm-input-file-template,
+input[type="file"][id*="template"] {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+  pointer-events: none !important;
+}
+
+/* Zone de statut moderne */
+#bm-output-status {
+  font-size: 0.875rem;
+  background: var(--bm-background-light);
+  border: 1px solid var(--bm-border);
+  border-radius: var(--bm-radius-sm);
+  padding: 12px;
+  height: 80px;
+  width: 100%;
+  resize: vertical;
+  color: var(--bm-text);
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  line-height: 1.4;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--bm-accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Conteneur des boutons d'action */
+#bm-contain-buttons-action {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Texte petit moderne */
+#bm-overlay small {
+  font-size: 0.75rem;
+  color: var(--bm-text-muted);
+  font-weight: 500;
+}
+
+/* Espacement des éléments */
+#bm-contain-userinfo, 
+#bm-contain-automation, 
+#bm-contain-coords, 
+#bm-contain-buttons-template, 
+div:has(> #bm-input-file-template), 
+#bm-output-status {
+  margin-top: 16px;
+}
+
+/* Boutons modernes avec dégradés */
+#bm-overlay button, 
+#bm-overlay-telemetry button {
+  background: var(--bm-primary);
+  border: none;
+  border-radius: var(--bm-radius-sm);
+  padding: 10px 16px;
+  color: var(--bm-text);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    background: var(--bm-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:active {
+    background: var(--bm-primary-active);
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  &:disabled {
+    background: var(--bm-background-light);
+    color: var(--bm-text-muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    text-decoration: line-through;
+  }
+}
+
+/* Séparateurs modernes */
+#bm-overlay hr, 
+#bm-overlay-telemetry hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bm-border), transparent);
+  margin: 16px 0;
+}
+
+/* Animations d'entrée */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#bm-overlay, 
+#bm-overlay-telemetry {
+  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive design pour petits écrans */
+@media (max-width: 400px) {
+  #bm-overlay, 
+  #bm-overlay-telemetry {
+    max-width: 95vw;
+    min-width: 280px;
+    margin: 10px;
+  }
+  
+  #bm-contain-buttons-template {
+    grid-template-columns: 1fr;
+  }
+}
