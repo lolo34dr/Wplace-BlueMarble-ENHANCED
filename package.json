@@ -5,7 +5,7 @@
   "homepage": "https://bluemarble.camilledaguin.fr/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SwingTheVine/Wplace-BlueMarble.git"
+    "url": "https://github.com/lolo34dr/Wplace-BlueMarble-ENHANCED.git"
   },
   "scripts": {
     "build": "node build/build.js",
