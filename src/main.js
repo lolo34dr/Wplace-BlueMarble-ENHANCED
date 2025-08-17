@@ -633,7 +633,7 @@ function buildOverlayMain() {
             });
           }).buildElement()
         .buildElement()
-        .addSmall({'textContent': 'Made by SwingTheVine', 'style': 'margin-top: auto;'}).buildElement()
+        .addSmall({'textContent': 'Made by SwingTheVine - ENHANCED By lolo34dr', 'style': 'margin-top: auto;'}).buildElement()
       .buildElement()
     .buildElement()
   .buildOverlay(document.body);
