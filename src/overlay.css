@@ -1,206 +1,264 @@
-/* @since 0.5.1 */
+/* ===========================
+   Blue Marble Overlay — style amélioré
+   Version : améliorée pour modernité, accessibilité et cohérence visuelle
+   =========================== */
 
-/* The entire overlay */
+/* Variables globales — personnalise ici */
+:root{
+  --bm-primary: #144eb9;           /* couleur principale boutons */
+  --bm-primary-strong: #1061e5;
+  --bm-accent: #2e97ff;            /* accent/dominant */
+  --bm-bg: rgba(12,18,40,0.72);    /* overlay background (glass) */
+  --bm-border: rgba(255,255,255,0.06);
+  --bm-muted: rgba(255,255,255,0.65);
+  --bm-muted-2: rgba(255,255,255,0.45);
+  --bm-radius: 10px;
+  --bm-shadow: 0 10px 30px rgba(2,8,23,0.6);
+  --bm-ui-gap: 0.6rem;
+  --bm-maxw: 320px;
+  --bm-minw: 200px;
+}
+
+/* Base — overlay principal */
 #bm-overlay, #bm-overlay-telemetry {
   position: fixed;
-  background-color: rgba(21, 48, 99, 0.9);
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  z-index: 9000;
-  transition: all 0.3s ease, transform 0s;
-  max-width: 300px;
+  right: 1rem;
+  bottom: 1rem;
+  max-width: var(--bm-maxw);
+  min-width: var(--bm-minw);
   width: auto;
-  /* Performance optimizations for smooth dragging */
-  will-change: transform;
-  backface-visibility: hidden;
+  padding: 12px;
+  border-radius: var(--bm-radius);
+  color: white;
+  z-index: 9000;
+  font-family: 'Roboto Mono', 'Courier New', Monaco, 'DejaVu Sans Mono', monospace, Arial;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  backdrop-filter: blur(8px) saturate(110%);
+  background-color: var(--bm-bg);
+  border: 1px solid var(--bm-border);
+  box-shadow: var(--bm-shadow);
+  transition: transform 220ms cubic-bezier(.2,.9,.3,1), opacity 160ms ease, box-shadow 160ms ease;
+  will-change: transform, opacity;
   -webkit-backface-visibility: hidden;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
+  overflow: hidden;
 }
 
-/* Smooth transitions for minimize/maximize functionality */
+/* Responsive small screens */
+@media (max-width: 420px){
+  #bm-overlay, #bm-overlay-telemetry {
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    max-width: calc(100% - 1.2rem);
+  }
+}
+
+/* Smooth transitions for internal containers */
 #bm-contain-userinfo,
 #bm-overlay hr, #bm-overlay-telemetry hr,
-#bm-contain-automation, 
+#bm-contain-automation,
 #bm-contain-buttons-action {
-  transition: opacity 0.2s ease, height 0.2s ease;
+  transition: opacity 180ms ease, height 180ms ease, margin 180ms ease;
 }
 
-/* The entire overlay BUT it is cascading */
-div#bm-overlay, div#bm-overlay-telemetry {
-  /* Font stack is as follows:
-   * Highest Priority (Roboto Mono)
-   * Windows fallback (Courier New)
-   * macOS fallback (Monaco)
-   * Linux fallback (DejaVu Sans Mono)
-   * Any possible monospace font (monospace)
-   * Last resort (Arial) */
-  font-family: 'Roboto Mono', 'Courier New', 'Monaco', 'DejaVu Sans Mono', monospace, 'Arial';
-  letter-spacing: 0.05em;
-}
-
-/* The drag bar */
+/* Drag bar — plus visible et tactile */
 #bm-bar-drag, #bm-bar-drag-telemetry {
-  margin-bottom: 0.5em;
-  /* For background circles, width & height should be odd, cx & cy should be half of width & height, and r should be less than or equal to cx & cy */
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="5" height="5"><circle cx="3" cy="3" r="1.5" fill="CornflowerBlue" /></svg>') repeat;
+  display: flex;
+  align-items: center;
+  gap: 0.6ch;
   cursor: grab;
   width: 100%;
-  height: 1em;
+  height: 1.2em;
+  margin-bottom: 0.5rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6"><circle cx="3" cy="3" r="1.25" fill="%23ffffff33" /></svg>');
+  background-repeat: repeat;
+  opacity: 0.95;
+  user-select: none;
 }
 
-/* When the overlay is being dragged */
+/* Dragging state */
 #bm-bar-drag.dragging, #bm-bar-drag-telemetry.dragging {
   cursor: grabbing;
+  filter: brightness(0.98);
 }
 
-/* Disable interactions during drag for better performance */
+/* While overlay dragging, disable interactions (keep dragbar active) */
 #bm-overlay:has(#bm-bar-drag.dragging), #bm-overlay-telemetry:has(#bm-bar-drag-telemetry.dragging) {
   pointer-events: none;
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 }
+#bm-bar-drag.dragging, #bm-bar-drag-telemetry.dragging { pointer-events: auto; }
 
-/* Keep drag bar interactive when dragging */
-#bm-bar-drag.dragging, #bm-bar-drag-telemetry.dragging {
-  pointer-events: auto;
-}
-
-/* The container for the overlay header */
+/* Header layout */
 #bm-contain-header, #bm-contain-header-telemetry {
-  margin-bottom: 0.5em;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
 }
 
-/* When minimized, adjust header container */
-#bm-contain-header[style*="text-align: center"], #bm-contain-header-telemetry[style*="text-align: center"] {
-  display: flex;
+/* Centered/minimized header compatibility: conserve les sélecteurs inline existants + une classe plus pratique */
+#bm-contain-header[style*="text-align: center"],
+#bm-contain-header-telemetry[style*="text-align: center"],
+#bm-contain-header.minimized, #bm-contain-header-telemetry.minimized {
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-/* Ensure overlay maintains consistent width when minimized */
-#bm-overlay[style*="padding: 5px"], #bm-overlay-telemetry[style*="padding: 5px"] {
-  width: auto !important;
-  max-width: 300px;
-  min-width: 200px;
-}
-
-/* The Blue Marble image */
+/* Logo / image */
 #bm-overlay img {
   display: inline-block;
-  height: 2.5em;
-  margin-right: 1ch;
+  height: 2.6em;
+  width: 2.6em;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-right: 0.8ch;
   vertical-align: middle;
-  transition: opacity 0.2s ease;
+  transition: opacity 160ms ease, transform 200ms ease;
+  box-shadow: 0 4px 14px rgba(2,8,23,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
-/* When overlay is minimized, adjust image styling */
-#bm-contain-header[style*="text-align: center"] img {
-  margin-right: 0;
-  margin-left: 0;
-  display: block;
-  margin: 0 auto;
-}
+/* centered image when minimized */
+#bm-contain-header[style*="text-align: center"] img,
+#bm-contain-header.minimized img { margin: 0; display:block; }
 
-/* Ensure drag bar remains functional when minimized */
-#bm-bar-drag, #bm-bar-drag-telemetry {
-  transition: margin-bottom 0.2s ease;
-}
-
-/* The Blue Marble header */
+/* Title */
 #bm-overlay h1, #bm-overlay-telemetry h1 {
-  display: inline-block;
-  font-size: x-large;
-  font-weight: bold;
-  vertical-align: middle;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.45);
 }
 
-/* Checkboxes in the automation container */
+/* Subtext small */
+#bm-overlay small { color: var(--bm-muted-2); font-size: 0.72rem; display:block; margin-top: 2px; }
+
+/* Containers spacing */
+#bm-contain-userinfo,
+#bm-contain-automation,
+#bm-contain-coords,
+#bm-contain-buttons-template,
+div:has(> #bm-input-file-template),
+#bm-output-status { margin-top: var(--bm-ui-gap); }
+
+/* Automation checkboxes */
 #bm-contain-automation input[type="checkbox"] {
   vertical-align: middle;
-  margin-right: 0.5ch;
+  margin-right: 0.6ch;
+  width: 1.05em;
+  height: 1.05em;
+  accent-color: var(--bm-primary);
 }
+#bm-contain-automation label { margin-right: 0.5ch; color: var(--bm-muted); }
 
-/* Checkbox label/flavor text in the automation container */
-#bm-contain-automation label {
-  margin-right: 0.5ch;
-}
-
-/* Question Mark button */
-.bm-help {
-  border: white 1px solid;
-  height: 1.5em;
-  width: 1.5em;
-  margin-top: 2px;
-  text-align: center;
-  line-height: 1em;
-  padding: 0 !important; /* Overrides the padding in "#bm-overlay button" */
-}
-
-/* Pin button */
-#bm-button-coords {
-  vertical-align: middle;
-}
-
-/* Pin button image*/
-#bm-button-coords svg {
-  width: 50%;
-  margin: 0 auto;
-  fill: #111;
-}
-
-/* Container for action buttons, that is inside the action button container */
-div:has(> #bm-button-teleport) {
-  display: flex;
-  gap: 0.5ch;
-}
-
-/* Favorite (Star) button image */
-/* Templates (Person) button image */
-#bm-button-favorite svg,
-#bm-button-template svg {
-  height: 1em;
-  margin: 0 auto;
-  margin-top: 2px;
-  text-align: center;
-  line-height: 1em;
-  vertical-align: bottom;
-}
-
-/* Tile (x, y) & Pixel (x, y) input fields */
-#bm-contain-coords input[type="number"] {
-  appearance: auto;
-  -moz-appearance: textfield;
-  width: 5.5ch;
-  margin-left: 1ch;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0 0.5ch;
-  font-size: small;
-}
-
-/* Removes scroll bar on tile & pixel input fields */
-#bm-contain-coords input[type="number"]::-webkit-outer-spin-button,
-#bm-contain-coords input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Automation button container */
-#bm-contain-buttons-template {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
+/* Buttons — modernes et accessibles */
+#bm-overlay button, #bm-overlay-telemetry button {
+  display: inline-flex;
   align-items: center;
-  gap: 1ch;
+  gap: 0.5ch;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--bm-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, background-color 120ms ease;
+  box-shadow: 0 6px 18px rgba(16,97,229,0.12);
+  user-select: none;
 }
 
-/* The template file upload button */
+/* Hover / focus */
+#bm-overlay button:hover, #bm-overlay-telemetry button:hover,
+#bm-overlay button:focus-visible, #bm-overlay-telemetry button:focus-visible {
+  transform: translateY(-2px);
+  background-color: var(--bm-primary-strong);
+  outline: none;
+  box-shadow: 0 10px 28px rgba(16,97,229,0.18);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+/* Active */
+#bm-overlay button:active, #bm-overlay-telemetry button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(2,8,23,0.35);
+  background-color: var(--bm-accent);
+}
+
+/* Disabled — plus discret (évite line-through) */
+#bm-overlay button:disabled, #bm-overlay-telemetry button:disabled {
+  opacity: 0.45;
+  filter: grayscale(0.25);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Help (bouton '?') */
+.bm-help {
+  height: 1.6em;
+  width: 1.6em;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0;
+  line-height: 1;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.bm-help:hover { transform: translateY(-2px); background: rgba(255,255,255,0.08); }
+
+/* Pin button & icons — utilise currentColor pour faciliter le theming */
+#bm-button-coords { vertical-align: middle; display:inline-flex; align-items:center; }
+#bm-button-coords svg { width: 1.1em; height: 1.1em; fill: currentColor; }
+
+/* Favorite / template icons */
+#bm-button-favorite svg, #bm-button-template svg {
+  height: 1.05em;
+  vertical-align: middle;
+  margin-top: 2px;
+}
+
+/* Inputs (coords) */
+#bm-contain-coords input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  width: 5.5ch;
+  margin-left: 0.6ch;
+  background-color: rgba(255,255,255,0.03);
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.03);
+  font-size: 0.85rem;
+  color: white;
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+#bm-contain-coords input[type="number"]:focus {
+  outline: none;
+  box-shadow: 0 6px 16px rgba(16,97,229,0.12);
+  border-color: rgba(46,151,255,0.45);
+}
+
+/* Remove default spinners (WebKit) */
+#bm-contain-coords input[type="number"]::-webkit-outer-spin-button,
+#bm-contain-coords input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* File input wrapper (upload button) */
 div:has(> #bm-input-file-template) > button {
   width: 100%;
   white-space: nowrap;
@@ -208,71 +266,79 @@ div:has(> #bm-input-file-template) > button {
   text-overflow: ellipsis;
 }
 
-/* Force complete invisibility of file input to prevent native browser text */
+/* Force invisible file input (keeps ton approche) */
 #bm-input-file-template,
 input[type="file"][id*="template"] {
-  display: none !important;
-  visibility: hidden !important;
   position: absolute !important;
   left: -9999px !important;
   top: -9999px !important;
   width: 0 !important;
   height: 0 !important;
   opacity: 0 !important;
-  z-index: -9999 !important;
   pointer-events: none !important;
 }
 
 /* Output status area */
 #bm-output-status {
-  font-size: small;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0 0.5ch;
-  height: 3.75em;
+  font-size: 0.78rem;
+  background-color: rgba(255,255,255,0.02);
+  padding: 0.45rem 0.6rem;
+  height: 3.8em;
   width: 100%;
+  border-radius: 8px;
+  overflow-y: auto;
+  color: var(--bm-muted);
+  border: 1px solid rgba(255,255,255,0.02);
 }
 
-/* The action buttons below the status textarea */
+/* Action buttons container */
 #bm-contain-buttons-action {
   display: flex;
+  gap: 0.6rem;
   justify-content: space-between;
+  align-items: center;
 }
 
-/* All small elements */
-#bm-overlay small {
-  font-size: x-small;
-  color: lightgray;
+/* Template buttons container */
+#bm-contain-buttons-template {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
 }
 
-/* The elements that need spacing from each-other */
-#bm-contain-userinfo,
-#bm-contain-automation,
-#bm-contain-coords,
-#bm-contain-buttons-template,
-div:has(> #bm-input-file-template),
-#bm-output-status {
-  margin-top: 0.5em;
+/* Borders / separators */
+#bm-overlay hr, #bm-overlay-telemetry hr { border: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent); margin: 0.6rem 0; }
+
+/* Minimized / compact mode helpers */
+/* On certains code existants tu utilises inline style padding:5px — on prend aussi en compte class .compact/.minimized */
+#bm-overlay[style*="padding: 5px"],
+#bm-overlay-telemetry[style*="padding: 5px"],
+#bm-overlay.compact, #bm-overlay.minimized,
+#bm-overlay-telemetry.compact, #bm-overlay-telemetry.minimized {
+  padding: 6px;
+  width: auto !important;
+  max-width: var(--bm-maxw);
+  min-width: var(--bm-minw);
+  border-radius: 8px;
 }
 
-/* All overlay buttons */
-#bm-overlay button, #bm-overlay-telemetry button {
-  background-color: #144eb9;
-  border-radius: 1em;
-  padding: 0 0.75ch;
+/* Focus outlines accessibles pour keyboard navigation */
+#bm-overlay button:focus-visible, #bm-overlay-telemetry button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(46,151,255,0.14), 0 8px 20px rgba(2,8,23,0.45);
 }
 
-/* All overlay buttons when hovered/focused */
-#bm-overlay button:hover, #bm-overlay button:focus-visible, #bm-overlay-telemetry button:hover, #bm-overlay-telemetry button:focus-visible {
-  background-color: #1061e5;
+/* Tiny UX polish: subtle hover on the whole overlay gives lift */
+#bm-overlay:hover, #bm-overlay-telemetry:hover {
+  transform: translateY(-4px);
 }
 
-/* All overlay buttons when pressed (plus disabled color) */
-#bm-overlay button:active, #bm-overlay-telemetry button:active
-#bm-overlay button:disabled, #bm-overlay-telemetry button:disabled {
-  background-color: #2e97ff;
+/* Accessibility: high-contrast fallback when user prefers it */
+@media (prefers-contrast: high){
+  #bm-overlay, #bm-overlay-telemetry { border-color: rgba(255,255,255,0.14); box-shadow: 0 12px 30px rgba(0,0,0,0.75); }
 }
 
-/* All overlay buttons when disabled */
-#bm-overlay button:disabled, #bm-overlay-telemetry button:disabled {
-  text-decoration: line-through;
-}
+/* Keep previous monospace styling for small inline elements */
+#bm-overlay small { font-family: inherit; }
+
+/* Fin */
