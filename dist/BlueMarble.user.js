@@ -7,7 +7,7 @@
 // @license      MPL-2.0
 // @supportURL   https://discord.gg/tpeBPy46hf
 // @homepageURL  https://bluemarble.camilledaguin.fr/
-// @icon         https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/8d02ac9cbe8f6861248152f2b0d632a0b4a830ee/dist/assets/Favicon.png
+// @icon         https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/deeb594bc3428f474b7eefec4ab9a1e3881428fe/dist/assets/Favicon.png
 // @updateURL    https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/main/dist/BlueMarble.user.js
 // @downloadURL  https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/main/dist/BlueMarble.user.js
 // @match        https://wplace.live/*
@@ -17,7 +17,7 @@
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 // @connect      telemetry.thebluecorner.net
-// @resource     CSS-BM-File https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/8d02ac9cbe8f6861248152f2b0d632a0b4a830ee/dist/BlueMarble.user.css
+// @resource     CSS-BM-File https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/deeb594bc3428f474b7eefec4ab9a1e3881428fe/dist/BlueMarble.user.css
 // ==/UserScript==
 
 // Wplace  --> https://wplace.live
