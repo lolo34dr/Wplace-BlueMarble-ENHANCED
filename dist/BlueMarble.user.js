@@ -27,44 +27,68 @@
   'use strict';
 
   const RAW_URL = 'https://raw.githubusercontent.com/lolo34dr/Wplace-BlueMarble-ENHANCED/main/src/main.js';
+  const LOG_PREFIX = '[BM-remote-loader]';
 
-  function log(...args) { console.info('[BM-loader]', ...args); }
-  function err(...args) { console.error('[BM-loader]', ...args); }
+  function log(...args){ console.info(LOG_PREFIX, ...args); }
+  function warn(...args){ console.warn(LOG_PREFIX, ...args); }
+  function error(...args){ console.error(LOG_PREFIX, ...args); }
 
-  // Fetch the raw JS via GM_xmlhttpRequest (bypasses CORS)
+  // Fetch remote JS bypassing CORS (GM_xmlhttpRequest)
   GM_xmlhttpRequest({
     method: 'GET',
     url: RAW_URL,
     onload(resp) {
-      if (resp.status >= 200 && resp.status < 300 && resp.responseText) {
-        try {
-          const code = resp.responseText;
-          // Heuristic: if the fetched file uses ESM imports/exports, inject as module.
-          const isModule = /(^|\n)\s*(import|export)\s+/m.test(code);
-          const script = document.createElement('script');
+      if (!resp || resp.status < 200 || resp.status >= 300 || !resp.responseText) {
+        return error('Échec du téléchargement', resp && resp.status, resp && resp.statusText);
+      }
 
-          script.type = isModule ? 'module' : 'text/javascript';
-          // Add sourceURL so errors and debugging point to the remote file
-          script.textContent = code + '\n//# sourceURL=' + RAW_URL;
+      const code = resp.responseText;
+      // Heuristique simple pour détecter ESM (import/export). Non parfaite mais fonctionnelle la plupart du temps.
+      const isModule = /(^|\n)\s*(import|export)\s+/m.test(code);
 
-          // Insert as early as possible
-          (document.documentElement || document.head || document.body).appendChild(script);
-          // Optionally remove element node after insertion (the script already ran)
-          script.parentNode && script.parentNode.removeChild(script);
-
-          log('Successfully injected remote script:', RAW_URL, 'as', script.type);
-        } catch (e) {
-          err('Failed to execute remote script:', e);
+      try {
+        if (isModule) {
+          // Crée un blob et injecte comme <script type="module" src="blob:...">
+          const blob = new Blob([code + '\n//# sourceURL=' + RAW_URL], { type: 'application/javascript' });
+          const blobUrl = URL.createObjectURL(blob);
+          const s = document.createElement('script');
+          s.type = 'module';
+          s.src = blobUrl;
+          s.async = false; // exécute dès que possible
+          s.onload = () => {
+            log('Module exécuté depuis', RAW_URL);
+            // libère l'URL blob après un court délai pour éviter d'interrompre l'exécution si besoin
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            s.remove();
+          };
+          s.onerror = (ev) => {
+            error('Erreur lors du chargement du module', ev);
+            s.remove();
+            URL.revokeObjectURL(blobUrl);
+          };
+          // injecte dans documentElement pour s'exécuter tôt
+          (document.documentElement || document.head || document.body).appendChild(s);
+        } else {
+          // Injection directe en tant que script classique dans le contexte page
+          const wrapper = `(function(){\ntry{\n${code}\n}catch(e){console.error('${LOG_PREFIX} remote script error:', e)}\n})();\n//# sourceURL=${RAW_URL}`;
+          const s = document.createElement('script');
+          s.type = 'text/javascript';
+          s.textContent = wrapper;
+          (document.documentElement || document.head || document.body).appendChild(s);
+          // on peut retirer le nœud (le script s'est déjà exécuté)
+          s.remove();
+          log('Script non-module injecté et exécuté depuis', RAW_URL);
         }
-      } else {
-        err('Failed to fetch remote script. HTTP', resp.status, resp.statusText);
+      } catch (e) {
+        error('Exception lors de l\'injection/exécution:', e);
       }
     },
-    onerror(e) {
-      err('Network error while fetching remote script:', e);
+    onerror(err) {
+      error('GM_xmlhttpRequest network error:', err);
+    },
+    ontimeout() {
+      warn('GM_xmlhttpRequest timeout');
     }
   });
 
-  // Safety note (console)
-  log('Attempting to load remote Blue Marble main.js from GitHub raw.');
 })();
