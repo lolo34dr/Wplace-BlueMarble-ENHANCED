@@ -12,156 +12,6 @@ const name = GM_info.script.name.toString(); // Name of userscript
 const version = GM_info.script.version.toString(); // Version of userscript
 const consoleStyle = 'color: cornflowerblue;'; // The styling for the console logs
 
-// --------------------- i18n / Language selection ---------------------
-// Supported languages (key -> display name)
-const SUPPORTED_LANGS = { en: 'English', fr: 'Français' };
-const DEFAULT_LANG = 'fr'; // you can change default here
-
-function _getStoredUserSettings() {
-  try { return JSON.parse(GM_getValue('bmUserSettings', '{}')) || {}; } catch (e) { return {}; }
-}
-
-let currentLang = (_getStoredUserSettings().lang) || DEFAULT_LANG;
-
-const I18N = {
-  en: {
-    move_up: 'Move ↑',
-    move_down: 'Move ↓',
-    username: 'Username:',
-    droplets: 'Droplets:',
-    next_level: 'Next level in...',
-    enable_all: 'Enable All',
-    disable_all: 'Disable All',
-    no_template_colors: 'No template colors to display.',
-    upload_template: 'Upload Template',
-    enable: 'Enable',
-    create: 'Create',
-    disable: 'Disable',
-    status_placeholder: 'Status: Sleeping...\nVersion:',
-    made_by: 'Made by SwingTheVine - ENHANCED By lolo34dr',
-    template_color_converter: 'Template Color Converter',
-    website: 'Official Blue Marble Website',
-    enabled_templates: 'Enabled templates!',
-    disabled_templates: 'Disabled templates!',
-    coordinates_malformed: 'Coordinates are malformed! Did you try clicking on the canvas first?',
-    no_file_selected: 'No file selected!',
-    enabled_colors: 'Enabled all colors',
-    disabled_colors: 'Disabled all colors',
-
-    telemetry_title: `${name} Telemetry`,
-    telemetry_more: 'More Information',
-    telemetry_enable: 'Enable Telemetry',
-    telemetry_disable: 'Disable Telemetry',
-    telemetry_text_1: 'We collect anonymous telemetry data such as your browser, OS, and script version to make the experience better for everyone. The data is never shared personally. The data is never sold. You can turn this off by pressing the \"Disable\" button, but keeping it on helps us improve features and reliability faster. Thank you for supporting the Blue Marble!',
-    telemetry_text_2: 'You can disable telemetry by pressing the "Disable" button below.'
-  },
-  fr: {
-    move_up: 'Monter ↑',
-    move_down: 'Descendre ↓',
-    username: "Nom d'utilisateur :",
-    droplets: 'Gouttes :',
-    next_level: 'Niveau suivant dans...',
-    enable_all: 'Activer tout',
-    disable_all: 'Désactiver tout',
-    no_template_colors: 'Aucune couleur de template à afficher.',
-    upload_template: 'Importer un template',
-    enable: 'Activer',
-    create: 'Créer',
-    disable: 'Désactiver',
-    status_placeholder: 'Statut : En veille...\nVersion :',
-    made_by: 'Made by SwingTheVine - ENHANCED By lolo34dr',
-    template_color_converter: 'Convertisseur de couleur de template',
-    website: 'Site officiel Blue Marble',
-    enabled_templates: 'Templates activés !',
-    disabled_templates: 'Templates désactivés !',
-    coordinates_malformed: 'Coordonnées malformées ! Avez-vous cliqué sur le canvas avant ?',
-    no_file_selected: "Aucun fichier sélectionné !",
-    enabled_colors: 'Toutes les couleurs activées',
-    disabled_colors: 'Toutes les couleurs désactivées',
-
-    telemetry_title: `${name} Télémetrie`,
-    telemetry_more: 'Plus d'informations',
-    telemetry_enable: 'Activer la télémétrie',
-    telemetry_disable: 'Désactiver la télémétrie',
-    telemetry_text_1: "Nous collectons des données de télémétrie anonymes comme votre navigateur, OS et la version du script pour améliorer l'expérience pour tout le monde. Les données ne sont jamais partagées personnellement ni vendues. Vous pouvez désactiver cela en appuyant sur 'Désactiver'. Garder la télémétrie active nous aide à améliorer les fonctionnalités et la fiabilité. Merci de soutenir Blue Marble !",
-    telemetry_text_2: 'Vous pouvez désactiver la télémétrie en appuyant sur le bouton "Désactiver" ci-dessous.'
-  }
-};
-
-function t(key) {
-  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N[DEFAULT_LANG] && I18N[DEFAULT_LANG][key]) || key;
-}
-
-function setLang(lang) {
-  if (!SUPPORTED_LANGS[lang]) { return; }
-  currentLang = lang;
-  try {
-    const s = _getStoredUserSettings();
-    s.lang = lang;
-    GM.setValue('bmUserSettings', JSON.stringify(s));
-  } catch (e) {}
-  // update visible UI texts
-  try { updateUIForLang(); } catch (e) {}
-}
-
-function createLanguageSelector(instance) {
-  const select = document.createElement('select');
-  select.id = 'bm-select-lang';
-  select.style.marginLeft = '8px';
-  for (const [k, v] of Object.entries(SUPPORTED_LANGS)) {
-    const opt = document.createElement('option');
-    opt.value = k;
-    opt.textContent = v;
-    if (k === currentLang) opt.selected = true;
-    select.appendChild(opt);
-  }
-  select.addEventListener('change', (e) => setLang(e.target.value));
-  return select;
-}
-
-function updateUIForLang() {
-  // header move button
-  const moveBtn = document.querySelector('#bm-button-move');
-  if (moveBtn) {
-    moveBtn.textContent = (moveBtn.textContent.includes('↓') || moveBtn.textContent.includes('Descendre') || moveBtn.textContent.includes('Move ↓')) ? t('move_down') : t('move_up');
-  }
-
-  const userName = document.getElementById('bm-user-name'); if (userName) userName.textContent = t('username');
-  const userDroplets = document.getElementById('bm-user-droplets'); if (userDroplets) userDroplets.textContent = t('droplets') || t('droplets');
-  const userNext = document.getElementById('bm-user-nextlevel'); if (userNext) userNext.textContent = t('next_level');
-
-  const btnEnableAll = document.getElementById('bm-button-colors-enable-all'); if (btnEnableAll) btnEnableAll.textContent = t('enable_all');
-  const btnDisableAll = document.getElementById('bm-button-colors-disable-all'); if (btnDisableAll) btnDisableAll.textContent = t('disable_all');
-
-  const inputFile = document.getElementById('bm-input-file-template'); if (inputFile) inputFile.setAttribute('title', t('upload_template'));
-  const btnEnable = document.getElementById('bm-button-enable'); if (btnEnable) btnEnable.textContent = t('enable');
-  const btnCreate = document.getElementById('bm-button-create'); if (btnCreate) btnCreate.textContent = t('create');
-  const btnDisable = document.getElementById('bm-button-disable'); if (btnDisable) btnDisable.textContent = t('disable');
-
-  const textarea = document.getElementById(overlayMain.outputStatusId);
-  if (textarea) textarea.placeholder = `${t('status_placeholder')} ${version}`;
-
-  const small = document.querySelector('#bm-contain-buttons-action small'); if (small) small.textContent = t('made_by');
-
-  // color filter empty message
-  const listContainer = document.querySelector('#bm-colorfilter-list');
-  if (listContainer && (!templateManager.templatesArray || templateManager.templatesArray.length === 0)) {
-    listContainer.innerHTML = `<small>${t('no_template_colors')}</small>`;
-  }
-
-  // Telemetry overlay
-  const teleTitle = document.querySelector('#bm-contain-header-telemetry h1'); if (teleTitle) teleTitle.textContent = t('telemetry_title');
-  const teleMore = document.getElementById('bm-button-telemetry-more'); if (teleMore) teleMore.textContent = t('telemetry_more');
-  const teleEnable = document.getElementById('bm-button-telemetry-enable'); if (teleEnable) teleEnable.textContent = t('telemetry_enable');
-  const teleDisable = document.getElementById('bm-button-telemetry-disable'); if (teleDisable) teleDisable.textContent = t('telemetry_disable');
-  const telePs = document.querySelectorAll('#bm-contain-telemetry p'); if (telePs && telePs.length >= 2) {
-    telePs[0].textContent = t('telemetry_text_1');
-    telePs[1].textContent = t('telemetry_text_2');
-  }
-}
-
-// --------------------- end i18n ---------------------
-
 /** Injects code into the client
  * This code will execute outside of TamperMonkey's sandbox
  * @param {*} callback - The code to execute
@@ -342,8 +192,7 @@ if (Object.keys(userSettings).length == 0) {
   const uuid = crypto.randomUUID(); // Generates a random UUID
   console.log(uuid);
   GM.setValue('bmUserSettings', JSON.stringify({
-    'uuid': uuid,
-    'lang': currentLang
+    'uuid': uuid
   }));
 }
 setInterval(() => apiManager.sendHeartbeat(version), 1000 * 60 * 30); // Sends a heartbeat every 30 minutes
@@ -381,17 +230,17 @@ function observeBlack() {
     if (!move) {
       move = document.createElement('button');
       move.id = 'bm-button-move';
-      move.textContent = t('move_up');
+      move.textContent = 'Move ↑';
       move.className = 'btn btn-soft';
       move.onclick = function() {
         const roundedBox = this.parentNode.parentNode.parentNode.parentNode; // Obtains the rounded box
-        const shouldMoveUp = (this.textContent == t('move_up'));
+        const shouldMoveUp = (this.textContent == 'Move ↑');
         roundedBox.parentNode.className = roundedBox.parentNode.className.replace(shouldMoveUp ? 'bottom' : 'top', shouldMoveUp ? 'top' : 'bottom'); // Moves the rounded box to the top
         roundedBox.style.borderTopLeftRadius = shouldMoveUp ? '0px' : 'var(--radius-box)';
         roundedBox.style.borderTopRightRadius = shouldMoveUp ? '0px' : 'var(--radius-box)';
         roundedBox.style.borderBottomLeftRadius = shouldMoveUp ? 'var(--radius-box)' : '0px';
         roundedBox.style.borderBottomRightRadius = shouldMoveUp ? 'var(--radius-box)' : '0px';
-        this.textContent = shouldMoveUp ? t('move_down') : t('move_up');
+        this.textContent = shouldMoveUp ? 'Move ↓' : 'Move ↑';
       }
 
       // Attempts to find the "Paint Pixel" element for anchoring
@@ -533,16 +382,16 @@ function buildOverlayMain() {
               overlay.style.maxWidth = '60px';  // Prevent expansion
               overlay.style.minWidth = '60px';  // Prevent shrinking
               overlay.style.padding = '8px';    // Comfortable padding around icon
-               
+              
               // Apply icon positioning for better visual centering in minimized state
               // The 3px offset compensates for visual weight distribution
               img.style.marginLeft = '3px';
-               
+              
               // Configure header layout for minimized state
               header.style.textAlign = 'center';
               header.style.margin = '0';
               header.style.marginBottom = '0';
-               
+              
               // Ensure drag bar remains visible and properly spaced
               if (dragBar) {
                 dragBar.style.display = '';
@@ -563,12 +412,12 @@ function buildOverlayMain() {
                 coordsContainer.style.textAlign = '';         // Reset text alignment
                 coordsContainer.style.margin = '';            // Reset margins
               }
-               
+              
               // Restore coordinate button visibility
               if (coordsButton) {
                 coordsButton.style.display = '';
               }
-               
+              
               // Restore create button visibility and reset positioning
               if (createButton) {
                 createButton.style.display = '';
@@ -594,20 +443,20 @@ function buildOverlayMain() {
               
               // Reset icon positioning to default (remove minimized state offset)
               img.style.marginLeft = '';
-               
+              
               // Restore overlay to responsive dimensions
               overlay.style.padding = '10px';
-               
+              
               // Reset header styling to defaults
               header.style.textAlign = '';
               header.style.margin = '';
               header.style.marginBottom = '';
-               
+              
               // Reset drag bar spacing
               if (dragBar) {
                 dragBar.style.marginBottom = '0.5em';
               }
-               
+              
               // Remove all fixed dimensions to allow responsive behavior
               // This ensures the overlay can adapt to content changes
               overlay.style.width = '';
@@ -624,12 +473,6 @@ function buildOverlayMain() {
             
             // No status message needed - state change is visually obvious to users
           });
-
-          // append language selector next to the icon
-          try {
-            const sel = createLanguageSelector(overlayMain);
-            img.parentNode?.appendChild(sel);
-          } catch (_) {}
         }
       ).buildElement()
       .addHeader(1, {'textContent': name}).buildElement()
@@ -638,9 +481,9 @@ function buildOverlayMain() {
     .addHr().buildElement()
 
     .addDiv({'id': 'bm-contain-userinfo'})
-      .addP({'id': 'bm-user-name', 'textContent': t('username')}).buildElement()
-      .addP({'id': 'bm-user-droplets', 'textContent': t('droplets')}).buildElement()
-      .addP({'id': 'bm-user-nextlevel', 'textContent': t('next_level')}).buildElement()
+      .addP({'id': 'bm-user-name', 'textContent': 'Username:'}).buildElement()
+      .addP({'id': 'bm-user-droplets', 'textContent': 'Droplets:'}).buildElement()
+      .addP({'id': 'bm-user-nextlevel', 'textContent': 'Next level in...'}).buildElement()
     .buildElement()
 
     .addHr().buildElement()
@@ -658,7 +501,7 @@ function buildOverlayMain() {
             button.onclick = () => {
               const coords = instance.apiManager?.coordsTilePixel; // Retrieves the coords from the API manager
               if (!coords?.[0]) {
-                instance.handleDisplayError(t('coordinates_malformed'));
+                instance.handleDisplayError('Coordinates are malformed! Did you try clicking on the canvas first?');
                 return;
               }
               instance.updateInnerHTML('bm-input-tx', coords?.[0] || '');
@@ -709,36 +552,36 @@ function buildOverlayMain() {
       // Color filter UI
       .addDiv({'id': 'bm-contain-colorfilter', 'style': 'max-height: 140px; overflow: auto; border: 1px solid rgba(255,255,255,0.1); padding: 4px; border-radius: 4px; display: none;'})
         .addDiv({'style': 'display: flex; gap: 6px; margin-bottom: 6px;'})
-          .addButton({'id': 'bm-button-colors-enable-all', 'textContent': t('enable_all')}, (instance, button) => {
+          .addButton({'id': 'bm-button-colors-enable-all', 'textContent': 'Enable All'}, (instance, button) => {
             button.onclick = () => {
               const t = templateManager.templatesArray[0];
               if (!t?.colorPalette) { return; }
               Object.values(t.colorPalette).forEach(v => v.enabled = true);
               buildColorFilterList();
-              instance.handleDisplayStatus(t('enabled_colors'));
+              instance.handleDisplayStatus('Enabled all colors');
             };
           }).buildElement()
-          .addButton({'id': 'bm-button-colors-disable-all', 'textContent': t('disable_all')}, (instance, button) => {
+          .addButton({'id': 'bm-button-colors-disable-all', 'textContent': 'Disable All'}, (instance, button) => {
             button.onclick = () => {
               const t = templateManager.templatesArray[0];
               if (!t?.colorPalette) { return; }
               Object.values(t.colorPalette).forEach(v => v.enabled = false);
               buildColorFilterList();
-              instance.handleDisplayStatus(t('disabled_colors'));
+              instance.handleDisplayStatus('Disabled all colors');
             };
           }).buildElement()
         .buildElement()
         .addDiv({'id': 'bm-colorfilter-list'}).buildElement()
       .buildElement()
-      .addInputFile({'id': 'bm-input-file-template', 'textContent': t('upload_template'), 'accept': 'image/png, image/jpeg, image/webp, image/bmp, image/gif'}).buildElement()
+      .addInputFile({'id': 'bm-input-file-template', 'textContent': 'Upload Template', 'accept': 'image/png, image/jpeg, image/webp, image/bmp, image/gif'}).buildElement()
       .addDiv({'id': 'bm-contain-buttons-template'})
-        .addButton({'id': 'bm-button-enable', 'textContent': t('enable')}, (instance, button) => {
+        .addButton({'id': 'bm-button-enable', 'textContent': 'Enable'}, (instance, button) => {
           button.onclick = () => {
             instance.apiManager?.templateManager?.setTemplatesShouldBeDrawn(true);
-            instance.handleDisplayStatus(t('enabled_templates'));
+            instance.handleDisplayStatus(`Enabled templates!`);
           }
         }).buildElement()
-        .addButton({'id': 'bm-button-create', 'textContent': t('create')}, (instance, button) => {
+        .addButton({'id': 'bm-button-create', 'textContent': 'Create'}, (instance, button) => {
           button.onclick = () => {
             const input = document.querySelector('#bm-input-file-template');
 
