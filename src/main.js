@@ -206,7 +206,33 @@ if ((userSettings?.telemetry == undefined) || (userSettings?.telemetry > 1)) { /
 
 buildOverlayMain(); // Builds the main overlay
 
-// ---------- Helpers ----------
+// ---------- EXPORT / IMPORT: sauvegarde TOUT les pixels (RGBA) ----------
+
+/** Convertit un Uint8Array en base64 (chunked pour grandes tailles) */
+function uint8ToBase64(u8) {
+  let CHUNK = 0x8000;
+  let index = 0;
+  let length = u8.length;
+  let result = '';
+  while (index < length) {
+    let slice = u8.subarray(index, Math.min(index + CHUNK, length));
+    result += String.fromCharCode.apply(null, slice);
+    index += CHUNK;
+  }
+  return btoa(result);
+}
+
+/** Convertit une base64 string en Uint8Array */
+function base64ToUint8(base64) {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 function downloadObjectAsJson(obj, filename = 'bm-template-backup.json') {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -219,24 +245,69 @@ function downloadObjectAsJson(obj, filename = 'bm-template-backup.json') {
   URL.revokeObjectURL(url);
 }
 
-function blobToDataURL(blob) {
+function loadImageFromSource(srcOrBlobOrImg) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-// ---------- Exporter un template en JSON ----------
-async function exportTemplateAsJSON(index = 0) {
-  try {
-    const t = templateManager.templatesArray?.[index];
-    if (!t) {
-      overlayMain.handleDisplayError('Aucun template chargé à exporter.');
+    // if already an HTMLImageElement and loaded:
+    if (srcOrBlobOrImg instanceof HTMLImageElement) {
+      if (srcOrBlobOrImg.complete && srcOrBlobOrImg.naturalWidth) return resolve(srcOrBlobOrImg);
+      const img = srcOrBlobOrImg;
+      img.addEventListener('load', () => resolve(img));
+      img.addEventListener('error', reject);
       return;
     }
 
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // tente d'éviter les problèmes CORS si possible
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+
+    if (srcOrBlobOrImg instanceof Blob) {
+      const url = URL.createObjectURL(srcOrBlobOrImg);
+      img.src = url;
+      // revoke après le load via onload (géré ci-dessus)
+      img.addEventListener('load', () => URL.revokeObjectURL(url));
+    } else if (typeof srcOrBlobOrImg === 'string') {
+      img.src = srcOrBlobOrImg;
+    } else {
+      reject(new Error('Source d\'image non reconnue'));
+    }
+  });
+}
+
+async function exportTemplateAllPixels(index = 0) {
+  try {
+    const t = templateManager.templatesArray?.[index];
+    if (!t) { overlayMain.handleDisplayError('Aucun template trouvé pour l\'export.'); return; }
+
+    // Détermine la source d'image candidate
+    const candidates = [];
+    if (t.imageDataURL) candidates.push(t.imageDataURL);
+    if (t.imageBlob) candidates.push(t.imageBlob);
+    if (t.image instanceof HTMLImageElement) candidates.push(t.image);
+    if (t.img instanceof HTMLImageElement) candidates.push(t.img);
+    if (t.src) candidates.push(t.src);
+    if (t.imageUrl) candidates.push(t.imageUrl);
+
+    // fallback: si templateManager contient une image encodée dans templatesJSON
+    try {
+      const stored = templateManager.templatesJSON?.templates?.[t.storageKey];
+      if (stored && stored.imageDataURL) candidates.push(stored.imageDataURL);
+    } catch (_) {}
+
+    let img = null;
+    let lastError = null;
+    // essaie chaque candidate jusqu'à ce que l'une charge
+    for (const c of candidates) {
+      try {
+        img = await loadImageFromSource(c);
+        if (img) break;
+      } catch (e) {
+        lastError = e;
+        continue;
+      }
+    }
+
+    // si aucune image trouvée, on essaie de récupérer directement des pixels existants (si t.pixels existe)
     const out = {
       meta: {
         name: t.name || t.storageKey || `template-${index}`,
@@ -244,87 +315,89 @@ async function exportTemplateAsJSON(index = 0) {
         coords: t.coords || t.templateCoords || null,
         exportedAt: new Date().toISOString()
       },
-      palette: t.colorPalette || null,     // objet rgb -> meta
-      pixels: null,                        // rempli si on peut extraire les pixels
-      imageDataURL: null                   // fallback / option : image encodée (dataURL)
+      palette: t.colorPalette || t.palette || null,
+      pixels: null,
+      imageDataURL: null,
+      notes: []
     };
 
-    // 1) Si le template expose une pixelMap ou pixels, utilise-le directement
-    if (t.pixelMap) {
-      out.pixels = t.pixelMap; // format libre selon ton manager (on l'exporte tel quel)
-    } else {
-      // 2) Sinon essaie d'obtenir une image (élément <img> sur l'objet template) et lire les pixels
-      const img = t.image || t.img || t.imageElement || (t.src ? (new Image()) : null);
-      if (img && (img instanceof HTMLImageElement ? (img.complete && img.naturalWidth) : false)) {
-        // dessiner dans un canvas pour lire les pixels
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const w = canvas.width, h = canvas.height;
-        const imdata = ctx.getImageData(0, 0, w, h).data;
-        const pixels = [];
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const i = (y * w + x) * 4;
-            const a = imdata[i + 3];
-            if (a === 0) continue; // on skip les transparents pour alléger
-            const r = imdata[i], g = imdata[i + 1], b = imdata[i + 2];
-            pixels.push([x, y, r, g, b]);
-          }
-        }
-        out.pixels = { width: w, height: h, list: pixels }; // structure : {w,h, [[x,y,r,g,b], ...]}
-        // et on fournit aussi une image en dataURL en backup (utile si pixels trop volumineux)
-        out.imageDataURL = canvas.toDataURL('image/png');
-      } else if (t.imageBlob) {
-        // si on a un blob stocké côté template => encode en dataURL
-        try {
-          out.imageDataURL = await blobToDataURL(t.imageBlob);
-        } catch (_) {}
-      } else if (t.src && typeof t.src === 'string') {
-        // fallback : on tente de fetcher l'URL et l'encoder (si CORS le permet)
-        try {
-          const resp = await fetch(t.src);
-          const b = await resp.blob();
-          out.imageDataURL = await blobToDataURL(b);
-        } catch (_) {
-          // ignore - on ne veut pas casser l'export si fetch refuse
-        }
+    if (!img) {
+      // si on a déjà des pixels dans l'objet template, on les prend
+      if (t.pixels && t.pixels.width && t.pixels.dataBase64) {
+        out.pixels = t.pixels;
+        out.imageDataURL = t.imageDataURL || null;
+        overlayMain.handleDisplayStatus('Export à partir des pixels déjà présents dans le template.');
+        downloadObjectAsJson(out, `${out.meta.name}-backup.json`);
+        return;
+      } else {
+        // rien de convertible
+        out.notes.push('Aucune image chargée / accessible dans le template.');
+        if (lastError) out.notes.push('Dernière erreur de chargement : ' + (lastError.message || lastError));
+        overlayMain.handleDisplayError('Impossible de trouver une image pour ce template. L\'export contiendra uniquement les métadonnées si disponible.');
+        downloadObjectAsJson(out, `${out.meta.name}-backup.json`);
+        return;
       }
     }
 
-    // On ajoute aussi la palette stockée (si existante)
-    if (!out.palette && templateManager.templatesArray?.[index]?.palette) {
-      out.palette = templateManager.templatesArray[index].palette;
+    // On a une image: dessine dans un canvas
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    // Toujours fournir le PNG encodé (utile si getImageData est bloqué)
+    try {
+      out.imageDataURL = canvas.toDataURL('image/png');
+    } catch (e) {
+      // improbable mais catch au cas où
+      out.notes.push('Impossible de générer imageDataURL: ' + (e.message || e));
     }
 
-    // Téléchargement
-    downloadObjectAsJson(out, `${out.meta.name || 'bm-template' }-backup.json`);
-    overlayMain.handleDisplayStatus('Export terminé.');
+    // Tenter de lire tous les pixels RGBA (peut échouer si CORS)
+    let imdata;
+    try {
+      imdata = ctx.getImageData(0, 0, w, h);
+    } catch (err) {
+      out.notes.push('Lecture des pixels bloquée par CORS (getImageData impossible). Les pixels bruts ne seront pas inclus. Conserve imageDataURL si possible.');
+      overlayMain.handleDisplayError('getImageData() bloqué par la politique CORS du site — impossible d\'extraire les pixels bruts.');
+      downloadObjectAsJson(out, `${out.meta.name}-backup.json`);
+      return;
+    }
+
+    // Convertir les données RGBA en base64 (compact)
+    const u8 = new Uint8Array(imdata.data.buffer);
+    const b64 = uint8ToBase64(u8);
+
+    out.pixels = {
+      width: w,
+      height: h,
+      dataBase64: b64,
+      format: 'RGBA' // ordre des bytes
+    };
+
+    // Télécharge le JSON final
+    downloadObjectAsJson(out, `${out.meta.name}-backup.json`);
+    overlayMain.handleDisplayStatus(`Export terminé : ${w}×${h} (${Math.round((b64.length*3/4)/1024)} KB raw RGBA)`);
   } catch (e) {
     overlayMain.handleDisplayError('Export failed: ' + (e.message || e));
   }
 }
 
-// ---------- Importer un JSON de backup ----------
-function importTemplateFromFile(file) {
+function importTemplateFromBackupFile(file) {
   const reader = new FileReader();
   reader.onload = (ev) => {
     try {
       const text = ev.target.result;
       const json = JSON.parse(text);
 
-      // Validation basique
-      if (!json.meta) {
-        overlayMain.handleDisplayError('Fichier invalide : meta manquante.');
-        return;
-      }
+      if (!json.meta) { overlayMain.handleDisplayError('Fichier invalide : meta manquante.'); return; }
 
-      // Prépare la structure de templates si nécessaire
       templateManager.templatesJSON = templateManager.templatesJSON || { templates: {} };
 
-      // Choisir une clé unique si la clé fournie existe déjà
       const baseKey = json.meta.storageKey || json.meta.name || `imported-${Date.now()}`;
       let key = baseKey.toString();
       let i = 1;
@@ -332,37 +405,58 @@ function importTemplateFromFile(file) {
         key = `${baseKey}-${i++}`;
       }
 
-      // Construire l'objet template minimal pour le stockage (selon ce que ton templateManager attend)
-      const storedTemplate = {
-        name: json.meta.name || key,
-        storageKey: key,
-        coords: json.meta.coords || null,
-        palette: json.palette || json.colorPalette || null,
-        // on stocke imageDataURL si existe (sera utile pour recréer l'image)
-        imageDataURL: json.imageDataURL || null,
-        // on stocke pixels si fournis (structure {width,height,list})
-        pixels: json.pixels || null,
-        importedFrom: json.meta.exportedAt || new Date().toISOString()
-      };
-
-      // Sauvegarde dans templatesJSON (format utilisé par ton script)
-      templateManager.templatesJSON.templates = templateManager.templatesJSON.templates || {};
-      templateManager.templatesJSON.templates[key] = storedTemplate;
-
-      // Persistance via GM
-      GM.setValue('bmTemplates', JSON.stringify(templateManager.templatesJSON));
-
-      // Recharge le templateManager (la méthode importJSON est utilisée plus haut, on l'appelle pour recharger)
-      try {
-        templateManager.importJSON(templateManager.templatesJSON);
-      } catch (e) {
-        // si importJSON n'existe pas ou différent, on tente forcer le reload en déclenchant l'évènement
-        window.postMessage({ bmEvent: 'bm-rebuild-color-list' }, '*');
+      // Recréer l'image à partir des pixels bruts si fournis
+      async function buildImageDataURLFromPixels(pixels) {
+        if (!pixels || !pixels.width || !pixels.height || !pixels.dataBase64) return null;
+        const w = pixels.width, h = pixels.height;
+        const bytes = base64ToUint8(pixels.dataBase64);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        const imdata = ctx.createImageData(w, h);
+        imdata.data.set(bytes);
+        ctx.putImageData(imdata, 0, 0);
+        return canvas.toDataURL('image/png');
       }
 
-      overlayMain.handleDisplayStatus(`Template importé sous la clé "${key}"`);
-      // rebuild color list si nécessaire
-      try { buildColorFilterList(); } catch (_) {}
+      (async () => {
+        let imageDataURL = json.imageDataURL || null;
+        if (!imageDataURL && json.pixels && json.pixels.dataBase64) {
+          try {
+            imageDataURL = await buildImageDataURLFromPixels(json.pixels);
+          } catch (e) {
+            // fallback
+            overlayMain.handleDisplayError('Impossible de reconstruire l\'image à partir des pixels : ' + (e.message || e));
+          }
+        }
+
+        const storedTemplate = {
+          name: json.meta.name || key,
+          storageKey: key,
+          coords: json.meta.coords || null,
+          palette: json.palette || json.colorPalette || null,
+          imageDataURL: imageDataURL,
+          pixels: json.pixels || null,
+          importedFrom: json.meta.exportedAt || new Date().toISOString()
+        };
+
+        templateManager.templatesJSON.templates = templateManager.templatesJSON.templates || {};
+        templateManager.templatesJSON.templates[key] = storedTemplate;
+
+        // Persiste
+        GM.setValue('bmTemplates', JSON.stringify(templateManager.templatesJSON));
+
+        // Recharge (essaie de façon sûre)
+        try {
+          templateManager.importJSON(templateManager.templatesJSON);
+        } catch (_) {
+          // fallback minimal : trigger event and rebuild UI
+          window.postMessage({ bmEvent: 'bm-rebuild-color-list' }, '*');
+        }
+
+        overlayMain.handleDisplayStatus(`Template importé sous la clé "${key}"`);
+        try { buildColorFilterList(); } catch (_) {}
+      })();
     } catch (err) {
       overlayMain.handleDisplayError('Import failed: ' + (err.message || err));
     }
@@ -371,35 +465,32 @@ function importTemplateFromFile(file) {
   reader.readAsText(file);
 }
 
-// ---------- Ajout UI : boutons Export / Import ----------
+// ---------- Ajout UI : boutons Export / Import (idempotent) ----------
 (function addExportImportUI() {
   const container = document.querySelector('#bm-contain-buttons-template') || document.querySelector('#bm-contain-buttons-action');
   if (!container) return;
 
-  // Export button
-  if (!document.getElementById('bm-button-export')) {
+  if (!document.getElementById('bm-button-export-allpixels')) {
     const btnExport = document.createElement('button');
-    btnExport.id = 'bm-button-export';
-    btnExport.textContent = 'Export JSON';
+    btnExport.id = 'bm-button-export-allpixels';
+    btnExport.textContent = 'Export ALL Pixels';
     btnExport.className = 'bm-help';
     btnExport.style.marginRight = '6px';
-    btnExport.addEventListener('click', () => exportTemplateAsJSON(0));
+    btnExport.addEventListener('click', () => exportTemplateAllPixels(0));
     container.insertBefore(btnExport, container.firstChild);
   }
 
-  // Import input (visuel simple)
-  if (!document.getElementById('bm-input-import')) {
+  if (!document.getElementById('bm-input-import-backup')) {
     const input = document.createElement('input');
     input.type = 'file';
-    input.id = 'bm-input-import';
+    input.id = 'bm-input-import-backup';
     input.accept = 'application/json';
     input.style.display = 'inline-block';
     input.style.marginLeft = '6px';
     input.addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
-      importTemplateFromFile(f);
-      // reset pour pouvoir réimporter le même fichier plus tard
+      importTemplateFromBackupFile(f);
       e.target.value = '';
     });
     container.appendChild(input);
