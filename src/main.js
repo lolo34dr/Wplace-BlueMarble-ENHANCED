@@ -204,7 +204,7 @@ if ((userSettings?.telemetry == undefined) || (userSettings?.telemetry > 1)) { /
   buildTelemetryOverlay(telemetryOverlay); // Notifies the user about telemetry
 }
 
-buildOverlayMain(); // Builds the main overlay
+buildOverlayMain(); // Builds the main overlayd
 
 overlayMain.handleDrag('#bm-overlay', '#bm-bar-drag'); // Creates dragging capability on the drag bar for dragging the overlay
 
