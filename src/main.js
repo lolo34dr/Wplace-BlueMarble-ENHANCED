@@ -206,6 +206,207 @@ if ((userSettings?.telemetry == undefined) || (userSettings?.telemetry > 1)) { /
 
 buildOverlayMain(); // Builds the main overlay
 
+// ---------- Helpers ----------
+function downloadObjectAsJson(obj, filename = 'bm-template-backup.json') {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ---------- Exporter un template en JSON ----------
+async function exportTemplateAsJSON(index = 0) {
+  try {
+    const t = templateManager.templatesArray?.[index];
+    if (!t) {
+      overlayMain.handleDisplayError('Aucun template chargé à exporter.');
+      return;
+    }
+
+    const out = {
+      meta: {
+        name: t.name || t.storageKey || `template-${index}`,
+        storageKey: t.storageKey || null,
+        coords: t.coords || t.templateCoords || null,
+        exportedAt: new Date().toISOString()
+      },
+      palette: t.colorPalette || null,     // objet rgb -> meta
+      pixels: null,                        // rempli si on peut extraire les pixels
+      imageDataURL: null                   // fallback / option : image encodée (dataURL)
+    };
+
+    // 1) Si le template expose une pixelMap ou pixels, utilise-le directement
+    if (t.pixelMap) {
+      out.pixels = t.pixelMap; // format libre selon ton manager (on l'exporte tel quel)
+    } else {
+      // 2) Sinon essaie d'obtenir une image (élément <img> sur l'objet template) et lire les pixels
+      const img = t.image || t.img || t.imageElement || (t.src ? (new Image()) : null);
+      if (img && (img instanceof HTMLImageElement ? (img.complete && img.naturalWidth) : false)) {
+        // dessiner dans un canvas pour lire les pixels
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const w = canvas.width, h = canvas.height;
+        const imdata = ctx.getImageData(0, 0, w, h).data;
+        const pixels = [];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const a = imdata[i + 3];
+            if (a === 0) continue; // on skip les transparents pour alléger
+            const r = imdata[i], g = imdata[i + 1], b = imdata[i + 2];
+            pixels.push([x, y, r, g, b]);
+          }
+        }
+        out.pixels = { width: w, height: h, list: pixels }; // structure : {w,h, [[x,y,r,g,b], ...]}
+        // et on fournit aussi une image en dataURL en backup (utile si pixels trop volumineux)
+        out.imageDataURL = canvas.toDataURL('image/png');
+      } else if (t.imageBlob) {
+        // si on a un blob stocké côté template => encode en dataURL
+        try {
+          out.imageDataURL = await blobToDataURL(t.imageBlob);
+        } catch (_) {}
+      } else if (t.src && typeof t.src === 'string') {
+        // fallback : on tente de fetcher l'URL et l'encoder (si CORS le permet)
+        try {
+          const resp = await fetch(t.src);
+          const b = await resp.blob();
+          out.imageDataURL = await blobToDataURL(b);
+        } catch (_) {
+          // ignore - on ne veut pas casser l'export si fetch refuse
+        }
+      }
+    }
+
+    // On ajoute aussi la palette stockée (si existante)
+    if (!out.palette && templateManager.templatesArray?.[index]?.palette) {
+      out.palette = templateManager.templatesArray[index].palette;
+    }
+
+    // Téléchargement
+    downloadObjectAsJson(out, `${out.meta.name || 'bm-template' }-backup.json`);
+    overlayMain.handleDisplayStatus('Export terminé.');
+  } catch (e) {
+    overlayMain.handleDisplayError('Export failed: ' + (e.message || e));
+  }
+}
+
+// ---------- Importer un JSON de backup ----------
+function importTemplateFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const text = ev.target.result;
+      const json = JSON.parse(text);
+
+      // Validation basique
+      if (!json.meta) {
+        overlayMain.handleDisplayError('Fichier invalide : meta manquante.');
+        return;
+      }
+
+      // Prépare la structure de templates si nécessaire
+      templateManager.templatesJSON = templateManager.templatesJSON || { templates: {} };
+
+      // Choisir une clé unique si la clé fournie existe déjà
+      const baseKey = json.meta.storageKey || json.meta.name || `imported-${Date.now()}`;
+      let key = baseKey.toString();
+      let i = 1;
+      while (templateManager.templatesJSON.templates && templateManager.templatesJSON.templates[key]) {
+        key = `${baseKey}-${i++}`;
+      }
+
+      // Construire l'objet template minimal pour le stockage (selon ce que ton templateManager attend)
+      const storedTemplate = {
+        name: json.meta.name || key,
+        storageKey: key,
+        coords: json.meta.coords || null,
+        palette: json.palette || json.colorPalette || null,
+        // on stocke imageDataURL si existe (sera utile pour recréer l'image)
+        imageDataURL: json.imageDataURL || null,
+        // on stocke pixels si fournis (structure {width,height,list})
+        pixels: json.pixels || null,
+        importedFrom: json.meta.exportedAt || new Date().toISOString()
+      };
+
+      // Sauvegarde dans templatesJSON (format utilisé par ton script)
+      templateManager.templatesJSON.templates = templateManager.templatesJSON.templates || {};
+      templateManager.templatesJSON.templates[key] = storedTemplate;
+
+      // Persistance via GM
+      GM.setValue('bmTemplates', JSON.stringify(templateManager.templatesJSON));
+
+      // Recharge le templateManager (la méthode importJSON est utilisée plus haut, on l'appelle pour recharger)
+      try {
+        templateManager.importJSON(templateManager.templatesJSON);
+      } catch (e) {
+        // si importJSON n'existe pas ou différent, on tente forcer le reload en déclenchant l'évènement
+        window.postMessage({ bmEvent: 'bm-rebuild-color-list' }, '*');
+      }
+
+      overlayMain.handleDisplayStatus(`Template importé sous la clé "${key}"`);
+      // rebuild color list si nécessaire
+      try { buildColorFilterList(); } catch (_) {}
+    } catch (err) {
+      overlayMain.handleDisplayError('Import failed: ' + (err.message || err));
+    }
+  };
+  reader.onerror = () => overlayMain.handleDisplayError('Lecture du fichier impossible.');
+  reader.readAsText(file);
+}
+
+// ---------- Ajout UI : boutons Export / Import ----------
+(function addExportImportUI() {
+  const container = document.querySelector('#bm-contain-buttons-template') || document.querySelector('#bm-contain-buttons-action');
+  if (!container) return;
+
+  // Export button
+  if (!document.getElementById('bm-button-export')) {
+    const btnExport = document.createElement('button');
+    btnExport.id = 'bm-button-export';
+    btnExport.textContent = 'Export JSON';
+    btnExport.className = 'bm-help';
+    btnExport.style.marginRight = '6px';
+    btnExport.addEventListener('click', () => exportTemplateAsJSON(0));
+    container.insertBefore(btnExport, container.firstChild);
+  }
+
+  // Import input (visuel simple)
+  if (!document.getElementById('bm-input-import')) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'bm-input-import';
+    input.accept = 'application/json';
+    input.style.display = 'inline-block';
+    input.style.marginLeft = '6px';
+    input.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      importTemplateFromFile(f);
+      // reset pour pouvoir réimporter le même fichier plus tard
+      e.target.value = '';
+    });
+    container.appendChild(input);
+  }
+})();
+
+
 overlayMain.handleDrag('#bm-overlay', '#bm-bar-drag'); // Creates dragging capability on the drag bar for dragging the overlay
 
 apiManager.spontaneousResponseListener(overlayMain); // Reads spontaneous fetch responces
