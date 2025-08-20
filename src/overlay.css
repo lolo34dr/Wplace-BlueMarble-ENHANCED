@@ -1,467 +1,291 @@
-/* @since 0.5.1 - Version améliorée */
+/* blue-marble-enhanced.css
+   @since 0.6.0 - Thème enrichi, animations et accessibilité
+   Auteur: Assistant
+   Description: version améliorée, compatible CSS pur (pas de Sass).
+*/
 
-/* Variables CSS pour une maintenance facile */
-:root {
-  --bm-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --bm-primary-hover: linear-gradient(135deg, #7c8ef2 0%, #8a5cb8 100%);
-  --bm-primary-active: linear-gradient(135deg, #5a6fd8 0%, #6a4296 100%);
-  --bm-background: rgba(30, 41, 59, 0.95);
-  --bm-background-light: rgba(51, 65, 85, 0.8);
+/* ==========================================
+   Variables globales (thème sombre + light override)
+   ========================================== */
+:root{
+  /* couleurs principales (dark mode par défaut) */
+  --bm-primary-start: #667eea;
+  --bm-primary-end:   #764ba2;
+  --bm-primary: linear-gradient(135deg,var(--bm-primary-start),var(--bm-primary-end));
+  --bm-primary-hover: linear-gradient(135deg,#7c8ef2,#8a5cb8);
+  --bm-primary-active: linear-gradient(135deg,#5a6fd8,#6a4296);
+
+  --bm-background: rgba(20,28,40,0.92);
+  --bm-background-elev: rgba(30,40,60,0.9);
+  --bm-background-light: rgba(48,64,88,0.82);
+
   --bm-text: #f8fafc;
   --bm-text-muted: #cbd5e1;
   --bm-accent: #3b82f6;
   --bm-success: #10b981;
   --bm-warning: #f59e0b;
   --bm-error: #ef4444;
-  --bm-border: rgba(148, 163, 184, 0.2);
-  --bm-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
-  --bm-shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  --bm-border: rgba(148,163,184,0.12);
+
   --bm-radius: 12px;
-  --bm-radius-sm: 6px;
+  --bm-radius-sm: 8px;
+  --bm-shadow: 0 14px 30px -10px rgba(2,6,23,0.6), 0 10px 20px -10px rgba(2,6,23,0.3);
+  --bm-shadow-lg: 0 30px 60px -20px rgba(2,6,23,0.65);
+
+  --bm-elevation-1: 0 6px 18px rgba(2,6,23,0.35);
+  --bm-elevation-2: 0 18px 40px rgba(2,6,23,0.45);
+
+  --bm-duration: 380ms;
+  --bm-easing: cubic-bezier(0.2,0.9,0.25,1);
+
+  --bm-glow: 0 6px 20px rgba(59,130,246,0.14);
+  --bm-focus-ring: 0 0 0 4px rgba(59,130,246,0.12);
+
+  --bm-surface: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
 }
 
-/* L'overlay principal avec un design moderne */
-#bm-overlay, 
-#bm-overlay-telemetry {
+/* Light theme overrides when the host sets data-theme="light" */
+:root[data-theme="light"]{
+  --bm-background: rgba(245,247,250,0.96);
+  --bm-background-elev: rgba(255,255,255,0.95);
+  --bm-background-light: rgba(250,250,253,0.9);
+  --bm-text: #0b1220;
+  --bm-text-muted: #475569;
+  --bm-border: rgba(15,23,42,0.06);
+  --bm-shadow: 0 10px 24px rgba(2,6,23,0.06);
+  --bm-glow: 0 8px 26px rgba(59,130,246,0.08);
+}
+
+/* Respecter la préférence réduction de mouvement */
+@media (prefers-reduced-motion: reduce){
+  :root{ --bm-duration: 1ms; }
+  *{ transition-duration: 1ms !important; animation-duration: 1ms !important; }
+}
+
+/* ==========================================
+   Base overlay, accessible et performant
+   ========================================== */
+#bm-overlay, #bm-overlay-telemetry{
   position: fixed;
-  background: var(--bm-background);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  right: 18px;
+  bottom: 18px;
+  background: var(--bm-background-elev);
+  background-image: var(--bm-surface);
   color: var(--bm-text);
-  padding: 20px;
+  padding: 18px;
   border-radius: var(--bm-radius);
   border: 1px solid var(--bm-border);
   box-shadow: var(--bm-shadow);
   z-index: 9000;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  max-width: 340px;
-  min-width: 280px;
-  width: auto;
-  
-  /* Optimisations de performance */
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  
-  /* Effet de survol subtil */
-  &:hover {
-    box-shadow: var(--bm-shadow-lg);
-    transform: translateY(-2px);
-  }
+  transition: transform var(--bm-duration) var(--bm-easing), box-shadow var(--bm-duration) var(--bm-easing), opacity var(--bm-duration) var(--bm-easing);
+  width: clamp(260px, 32vw, 380px);
+  max-width: 420px;
+  min-width: 260px;
+  will-change: transform, opacity;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform-origin: 100% 100%;
+  overflow: hidden;
 }
 
-/* Transitions fluides pour les fonctionnalités de minimisation/maximisation */
-#bm-contain-userinfo, 
-#bm-overlay hr, 
-#bm-overlay-telemetry hr, 
-#bm-contain-automation, 
-#bm-contain-buttons-action {
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* léger effet "lift" au survol */
+#bm-overlay:hover, #bm-overlay-telemetry:hover{
+  transform: translateY(-6px) scale(1.005);
+  box-shadow: var(--bm-shadow-lg);
 }
 
-/* Typographie moderne avec une pile de polices améliorée */
-div#bm-overlay, 
-div#bm-overlay-telemetry {
-  font-family: 'SF Pro Display', 'Segoe UI Variable', 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.5;
+/* Entrée plus douce et plus fluide */
+@keyframes bm-slide-in {
+  from{ opacity: 0; transform: translateY(18px) scale(0.995); }
+  to{ opacity: 1; transform: translateY(0) scale(1); }
 }
+#bm-overlay, #bm-overlay-telemetry{ animation: bm-slide-in 420ms var(--bm-easing) both; }
 
-/* Barre de déplacement avec un style moderne */
-#bm-bar-drag, 
-#bm-bar-drag-telemetry {
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, transparent, var(--bm-accent), transparent);
-  background-size: 200% 2px;
-  background-position: center;
-  background-repeat: no-repeat;
-  cursor: grab;
-  width: 100%;
-  height: 24px;
-  border-radius: var(--bm-radius-sm);
-  transition: all 0.2s ease;
-  position: relative;
-  
-  /* Indicateur de déplacement moderne */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 32px;
-    height: 4px;
-    background: var(--bm-text-muted);
-    border-radius: 2px;
-    transition: all 0.2s ease;
-  }
-  
-  &:hover::before {
-    background: var(--bm-accent);
-    width: 40px;
-  }
-}
-
-/* État de déplacement */
-#bm-bar-drag.dragging, 
-#bm-bar-drag-telemetry.dragging {
-  cursor: grabbing;
-  
-  &::before {
-    background: var(--bm-accent);
-    width: 48px;
-  }
-}
-
-/* Désactiver les interactions pendant le déplacement */
-#bm-overlay:has(#bm-bar-drag.dragging), 
-#bm-overlay-telemetry:has(#bm-bar-drag-telemetry.dragging) {
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Garder la barre interactive pendant le déplacement */
-#bm-bar-drag.dragging, 
-#bm-bar-drag-telemetry.dragging {
-  pointer-events: auto;
-}
-
-/* Conteneur d'en-tête moderne */
-#bm-contain-header, 
-#bm-contain-header-telemetry {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--bm-border);
-}
-
-/* Styles d'en-tête minimisé */
-#bm-contain-header[style*="text-align: center"], 
-#bm-contain-header-telemetry[style*="text-align: center"] {
-  display: flex;
-  flex-direction: column;
+/* Minimized state (usage: add class .bm-minimized to #bm-overlay) */
+#bm-overlay.bm-minimized, #bm-overlay-telemetry.bm-minimized{
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  padding: 8px !important;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-bottom: none;
-  padding-bottom: 0;
+  text-align: center;
 }
 
-/* Maintenir une largeur cohérente quand minimisé */
-#bm-overlay[style*="padding: 5px"], 
-#bm-overlay-telemetry[style*="padding: 5px"] {
-  width: auto !important;
-  max-width: 300px;
-  min-width: 240px;
-  padding: 12px !important;
+/* Accessibility: outline visible when focused */
+#bm-overlay:focus-within, #bm-overlay-telemetry:focus-within{
+  box-shadow: var(--bm-shadow-lg), var(--bm-focus-ring);
 }
 
-/* Image Blue Marble avec effet moderne */
-#bm-overlay img {
-  display: inline-block;
-  height: 36px;
-  width: 36px;
-  margin-right: 12px;
-  vertical-align: middle;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  
-  &:hover {
-    transform: scale(1.1) rotate(5deg);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-  }
-}
-
-/* Ajustement de l'image quand minimisé */
-#bm-contain-header[style*="text-align: center"] img {
-  margin-right: 0;
-  margin-left: 0;
+/* ==========================================
+   Barre de drag optimisée (valid CSS)
+   ========================================== */
+#bm-bar-drag, #bm-bar-drag-telemetry{
+  margin-bottom: 12px;
+  height: 26px;
+  width: 100%;
+  cursor: grab;
+  border-radius: var(--bm-radius-sm);
+  position: relative;
   display: block;
-  margin: 0 auto 8px auto;
+  background-image: linear-gradient(90deg, transparent, var(--bm-accent), transparent);
+  background-size: 200% 2px; background-repeat: no-repeat; background-position: center;
+  transition: transform var(--bm-duration) var(--bm-easing);
+}
+#bm-bar-drag::before, #bm-bar-drag-telemetry::before{
+  content: '';
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 34px; height: 4px; border-radius: 4px; background: var(--bm-text-muted);
+  transition: all 180ms var(--bm-easing);
+}
+#bm-bar-drag:hover::before, #bm-bar-drag-telemetry:hover::before{ width: 44px; background: var(--bm-accent); }
+
+/* dragging state controlled by class .dragging */
+#bm-bar-drag.dragging, #bm-bar-drag-telemetry.dragging{ cursor: grabbing; }
+#bm-bar-drag.dragging::before, #bm-bar-drag-telemetry.dragging::before{
+  width: 54px; background: var(--bm-accent);
 }
 
-/* En-tête Blue Marble moderne */
-#bm-overlay h1, 
-#bm-overlay-telemetry h1 {
-  display: inline-block;
-  font-size: 1.5rem;
-  font-weight: 700;
-  vertical-align: middle;
-  margin: 0;
-  background: linear-gradient(135deg, var(--bm-text), var(--bm-accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* When dragging, freeze interactions except the bar itself */
+#bm-overlay:has(.dragging) { pointer-events: none; user-select: none; }
+#bm-overlay .dragging, #bm-overlay-telemetry .dragging{ pointer-events: auto; }
+
+/* ==========================================
+   Header / avatar / title
+   ========================================== */
+#bm-contain-header, #bm-contain-header-telemetry{
+  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--bm-border);
+  display: flex; gap: 12px; align-items: center;
+}
+#bm-contain-header img, #bm-contain-header-telemetry img{
+  height: 40px; width: 40px; border-radius: 999px; box-shadow: var(--bm-glow);
+  transition: transform var(--bm-duration) var(--bm-easing), box-shadow var(--bm-duration) var(--bm-easing);
+}
+#bm-contain-header img:hover, #bm-contain-header-telemetry img:hover{ transform: rotate(6deg) scale(1.06); }
+
+#bm-contain-header h1, #bm-contain-header-telemetry h1{
+  margin: 0; font-size: 1.15rem; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em;
+  background: linear-gradient(135deg,var(--bm-text),var(--bm-accent)); -webkit-background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
 }
 
-/* Cases à cocher modernes */
-#bm-contain-automation input[type="checkbox"] {
-  vertical-align: middle;
-  margin-right: 8px;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--bm-accent);
-  cursor: pointer;
-}
+/* center header when minimized */
+#bm-contain-header.center{ display: block; text-align:center; border-bottom: none; padding-bottom: 0; }
+#bm-contain-header.center img{ margin:0 auto 8px auto; }
 
-/* Étiquettes des cases à cocher */
-#bm-contain-automation label {
-  margin-right: 8px;
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.2s ease;
-  
-  &:hover {
-    color: var(--bm-accent);
-  }
-}
-
-/* Bouton d'aide moderne */
-.bm-help {
-  border: 1px solid var(--bm-border);
-  background: var(--bm-background-light);
-  color: var(--bm-text);
-  height: 28px;
-  width: 28px;
-  margin-top: 2px;
-  text-align: center;
-  line-height: 26px;
-  padding: 0 !important;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
-  
-  &:hover {
-    background: var(--bm-accent);
-    border-color: var(--bm-accent);
-    transform: scale(1.1);
-  }
-}
-
-/* Bouton de coordonnées */
-#bm-button-coords {
-  vertical-align: middle;
-}
-
-/* Image du bouton de coordonnées */
-#bm-button-coords svg {
-  width: 16px;
-  height: 16px;
-  margin: 0 auto;
-  fill: var(--bm-text);
-  transition: fill 0.2s ease;
-}
-
-/* Conteneur des boutons d'action flexibles */
-div:has(> #bm-button-teleport) {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* Images des boutons favoris et modèles */
-#bm-button-favorite svg, 
-#bm-button-template svg {
-  height: 16px;
-  width: 16px;
-  margin: 0 auto;
-  margin-top: 2px;
-  text-align: center;
-  line-height: 1em;
-  vertical-align: bottom;
-  fill: var(--bm-text);
-  transition: all 0.2s ease;
-}
-
-/* Champs de saisie modernes pour les coordonnées */
-#bm-contain-coords input[type="number"] {
-  appearance: none;
-  -moz-appearance: textfield;
-  width: 80px;
-  margin-left: 8px;
+/* ==========================================
+   Inputs, selects, number fields
+   ========================================== */
+#bm-contain-coords input[type="number"], #bm-output-status{
   background: var(--bm-background-light);
   border: 1px solid var(--bm-border);
   border-radius: var(--bm-radius-sm);
-  padding: 8px 12px;
-  font-size: 0.875rem;
-  color: var(--bm-text);
-  transition: all 0.2s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: var(--bm-accent);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-  
-  &:hover {
-    border-color: var(--bm-accent);
-  }
+  padding: 8px 12px; font-size: 0.9rem; color: var(--bm-text);
+  transition: box-shadow var(--bm-duration) var(--bm-easing), border-color var(--bm-duration) var(--bm-easing);
+}
+#bm-contain-coords input[type="number"]:focus{ outline: none; border-color: var(--bm-accent); box-shadow: var(--bm-focus-ring); }
+#bm-contain-coords input[type="number"]::-webkit-outer-spin-button, #bm-contain-coords input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+
+/* ==========================================
+   Checkbox / switches modernisés
+   ========================================== */
+#bm-contain-automation input[type="checkbox"]{
+  width: 18px; height: 18px; accent-color: var(--bm-accent); vertical-align: middle; cursor: pointer;
+}
+#bm-contain-automation label{ margin-right: 8px; cursor: pointer; color: var(--bm-text-muted); transition: color 180ms var(--bm-easing); }
+#bm-contain-automation label:hover{ color: var(--bm-accent); }
+
+/* ==========================================
+   Buttons avec effet ripple + gloss + states
+   ========================================== */
+#bm-overlay button, #bm-overlay-telemetry button{
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; background: var(--bm-primary); border: none; color: var(--bm-text); padding: 10px 14px; border-radius: 10px;
+  font-weight: 600; font-size: 0.92rem; cursor: pointer; transition: transform var(--bm-duration) var(--bm-easing), box-shadow var(--bm-duration) var(--bm-easing), opacity 160ms linear;
+  box-shadow: var(--bm-elevation-1);
+}
+#bm-overlay button:active, #bm-overlay-telemetry button:active{ transform: translateY(0); box-shadow: var(--bm-elevation-1); }
+#bm-overlay button:hover, #bm-overlay-telemetry button:hover{ transform: translateY(-3px); box-shadow: var(--bm-elevation-2); }
+#bm-overlay button:disabled{ background: var(--bm-background-light); color: var(--bm-text-muted); cursor: not-allowed; opacity: 0.8; }
+
+/* ripple effect (JS must add .ripple span) - fallback graceful */
+#bm-overlay button .ripple, #bm-overlay-telemetry button .ripple{ position:absolute; border-radius:999px; transform:scale(0); opacity:0.5; pointer-events:none; }
+@keyframes bm-ripple { to { transform: scale(6); opacity: 0; } }
+#bm-overlay button .ripple.animate, #bm-overlay-telemetry button .ripple.animate{ animation: bm-ripple 600ms linear; }
+
+/* alternate ghost / subtle buttons */
+.bm-btn-ghost{ background: transparent; border:1px solid var(--bm-border); color: var(--bm-text); }
+.bm-btn-ghost:hover{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-color: rgba(59,130,246,0.14); }
+
+/* Primary icon sizes */
+#bm-button-favorite svg, #bm-button-template svg, #bm-button-coords svg{ width: 16px; height: 16px; vertical-align: middle; fill: var(--bm-text); transition: transform 220ms var(--bm-easing); }
+#bm-button-favorite:hover svg, #bm-button-template:hover svg{ transform: scale(1.05) rotate(-8deg); }
+
+/* ==========================================
+   Output / status area (monospace + subtle glass)
+   ========================================== */
+#bm-output-status{
+  font-family: 'SF Mono', 'Roboto Mono', 'Cascadia Code', monospace; font-size: 0.86rem; color: var(--bm-text);
+  line-height: 1.45; height: auto; min-height: 72px; max-height: 220px; overflow: auto; resize: vertical;
+}
+#bm-output-status:focus{ outline: none; box-shadow: var(--bm-focus-ring); }
+
+/* ==========================================
+   Buttons template grid responsive
+   ========================================== */
+#bm-contain-buttons-template{ display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+
+/* file input hidden but accessible via label */
+#bm-input-file-template{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+
+/* ==========================================
+   Small text, separators and hr
+   ========================================== */
+#bm-overlay small{ color: var(--bm-text-muted); font-size: 0.78rem; }
+#bm-overlay hr{ border: none; height: 1px; background: linear-gradient(90deg, transparent, var(--bm-border), transparent); margin: 14px 0; }
+
+/* ==========================================
+   Fancy animations (float, pulse, shimmer)
+   ========================================== */
+@keyframes bm-float { 0%{ transform: translateY(0); } 50%{ transform: translateY(-6px); } 100%{ transform: translateY(0); } }
+@keyframes bm-pulse { 0%{ box-shadow: 0 0 0 0 rgba(59,130,246,0.08);} 70%{ box-shadow: 0 0 0 12px rgba(59,130,246,0.00);} 100%{ box-shadow: 0 0 0 0 rgba(59,130,246,0.00);} }
+@keyframes bm-shimmer { 0%{ background-position: -200% 0; } 100%{ background-position: 200% 0; } }
+
+.bm-animate-float{ animation: bm-float 6s ease-in-out infinite; }
+.bm-animate-pulse{ animation: bm-pulse 2000ms ease-out infinite; }
+.bm-shimmer{ background-image: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.06), rgba(255,255,255,0.02)); background-size: 200% 100%; animation: bm-shimmer 1600ms linear infinite; }
+
+/* Use shimmer on status placeholders */
+.bm-skeleton{ border-radius: 8px; min-height: 12px; background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03)); }
+
+/* ==========================================
+   Telemetry overlay difference (compact)
+   ========================================== */
+#bm-overlay-telemetry{ right: 18px; bottom: calc(18px + 120px); width: clamp(220px, 24vw, 320px); }
+
+/* ==========================================
+   Responsive tweaks
+   ========================================== */
+@media (max-width: 480px){
+  #bm-overlay, #bm-overlay-telemetry{ right: 8px; left: 8px; bottom: 12px; width: calc(100% - 16px); max-width: none; border-radius: 14px; }
+  #bm-contain-buttons-template{ grid-template-columns: 1fr; }
 }
 
-/* Suppression des flèches de défilement */
-#bm-contain-coords input[type="number"]::-webkit-outer-spin-button,
-#bm-contain-coords input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+/* ==========================================
+   Utilities and helpers
+   ========================================== */
+.hidden{ display: none !important; }
+.center{ text-align: center; }
+.flex{ display: flex; }
+.flex-center{ display:flex; align-items:center; justify-content:center; }
+.text-muted{ color: var(--bm-text-muted); }
 
-/* Conteneur des boutons de modèle */
-#bm-contain-buttons-template {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  align-items: center;
-}
+/* ==========================================
+   Examples of JS hooks (non-functional in pure CSS)
+   - .ripple.animate can be toggled by JS on click
+   - add/remove .bm-minimized to toggle minimization
+   - add .dragging to #bm-bar-drag while mouse is down
+   ========================================== */
 
-/* Bouton de téléchargement de modèle */
-div:has(> #bm-input-file-template) > button {
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Masquage complet de l'input de fichier */
-#bm-input-file-template,
-input[type="file"][id*="template"] {
-  display: none !important;
-  visibility: hidden !important;
-  position: absolute !important;
-  left: -9999px !important;
-  top: -9999px !important;
-  width: 0 !important;
-  height: 0 !important;
-  opacity: 0 !important;
-  z-index: -9999 !important;
-  pointer-events: none !important;
-}
-
-/* Zone de statut moderne */
-#bm-output-status {
-  font-size: 0.875rem;
-  background: var(--bm-background-light);
-  border: 1px solid var(--bm-border);
-  border-radius: var(--bm-radius-sm);
-  padding: 12px;
-  height: 80px;
-  width: 100%;
-  resize: vertical;
-  color: var(--bm-text);
-  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-  line-height: 1.4;
-  
-  &:focus {
-    outline: none;
-    border-color: var(--bm-accent);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-}
-
-/* Conteneur des boutons d'action */
-#bm-contain-buttons-action {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* Texte petit moderne */
-#bm-overlay small {
-  font-size: 0.75rem;
-  color: var(--bm-text-muted);
-  font-weight: 500;
-}
-
-/* Espacement des éléments */
-#bm-contain-userinfo, 
-#bm-contain-automation, 
-#bm-contain-coords, 
-#bm-contain-buttons-template, 
-div:has(> #bm-input-file-template), 
-#bm-output-status {
-  margin-top: 16px;
-}
-
-/* Boutons modernes avec dégradés */
-#bm-overlay button, 
-#bm-overlay-telemetry button {
-  background: var(--bm-primary);
-  border: none;
-  border-radius: var(--bm-radius-sm);
-  padding: 10px 16px;
-  color: var(--bm-text);
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  &:hover {
-    background: var(--bm-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-  
-  &:active {
-    background: var(--bm-primary-active);
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  &:disabled {
-    background: var(--bm-background-light);
-    color: var(--bm-text-muted);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-    text-decoration: line-through;
-  }
-}
-
-/* Séparateurs modernes */
-#bm-overlay hr, 
-#bm-overlay-telemetry hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--bm-border), transparent);
-  margin: 16px 0;
-}
-
-/* Animations d'entrée */
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-#bm-overlay, 
-#bm-overlay-telemetry {
-  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Responsive design pour petits écrans */
-@media (max-width: 400px) {
-  #bm-overlay, 
-  #bm-overlay-telemetry {
-    max-width: 95vw;
-    min-width: 280px;
-    margin: 10px;
-  }
-  
-  #bm-contain-buttons-template {
-    grid-template-columns: 1fr;
-  }
-}
+/* fin du fichier */
